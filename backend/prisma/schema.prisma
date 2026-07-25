@@ -1,0 +1,1102 @@
+// =============================================================================
+// ApplyOne — Complete Prisma Schema
+// Database: Supabase PostgreSQL
+// ORM: Prisma 7.x
+// =============================================================================
+//
+// ER DIAGRAM (Textual)
+//
+// User ──────────────────────────────────────────────────────────────────────
+//   │── UserPreferences (1:1)
+//   │── Resume (1:N)          ── ResumeAnalysis (1:1 per Resume)
+//   │── Application (1:N)    ── ApplicationTimeline (1:N)
+//   │── Subscription (1:N)   ── Payment (1:N)
+//   │── Notification (1:N)
+//   │── ChatSession (1:N)    ── ChatMessage (1:N)
+//   │── SupportTicket (1:N)  ── SupportReply (1:N)
+//   │── ActivityLog (1:N)
+//   └── Employee (1:1 optional)
+//
+// Job ────────────────────────────────────────────────────────────────────────
+//   │── Company (N:1)
+//   └── Application (1:N)
+//
+// SubscriptionPlan ───────────────────────────────────────────────────────────
+//   └── Subscription (1:N)
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum UserRole {
+  ADMIN
+  EMPLOYEE
+  USER
+}
+
+enum AccountType {
+  STUDENT
+  FRESHER
+  PROFESSIONAL
+}
+
+enum ApplicationStatus {
+  PENDING
+  ASSIGNED
+  APPLYING
+  APPLIED
+  INTERVIEW
+  OFFER
+  JOINED
+  REJECTED
+  CANCELLED
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  INTERNSHIP
+  CONTRACT
+  FREELANCE
+}
+
+enum RemoteMode {
+  REMOTE
+  HYBRID
+  ONSITE
+}
+
+enum ResumeStatus {
+  ACTIVE
+  ARCHIVED
+  PROCESSING
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  TRIAL
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  UPI
+  CARD
+  NET_BANKING
+  WALLET
+  RAZORPAY
+  STRIPE
+}
+
+enum NotificationType {
+  SYSTEM
+  APPLICATION
+  SUBSCRIPTION
+  PAYMENT
+  SUPPORT
+  AI
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketCategory {
+  BILLING
+  TECHNICAL
+  ACCOUNT
+  APPLICATION
+  GENERAL
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
+enum PlanStatus {
+  ACTIVE
+  INACTIVE
+  DEPRECATED
+}
+
+enum JobStatus {
+  ACTIVE
+  EXPIRED
+  CLOSED
+  DRAFT
+}
+
+// =============================================================================
+// MODEL: User
+// =============================================================================
+
+model User {
+  id          String      @id @default(uuid()) @db.Uuid
+  email       String      @unique
+  fullName    String
+  phone       String?
+  avatarUrl   String?
+  role        UserRole    @default(USER)
+  accountType AccountType @default(STUDENT)
+
+  hasExperience   Boolean @default(false)
+  currentCompany  String?
+  currentPosition String?
+  bio             String? @db.Text
+  experienceYears Int?
+
+  linkedinUrl  String?
+  githubUrl    String?
+  portfolioUrl String?
+
+  country  String?
+  city     String?
+  timezone String?
+
+  expectedPackages   Json?
+  lastMonthlyPackage Decimal? @db.Decimal(12, 2)
+  noticePeriodDays   Int?
+  workAuthorization  String?
+
+  isActive    Boolean   @default(true)
+  isVerified  Boolean   @default(false)
+  lastLoginAt DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  preferences    UserPreferences?
+  resumes        Resume[]
+  applications   Application[]
+  notifications  Notification[]
+  chatSessions   ChatSession[]
+  supportTickets SupportTicket[]
+  activityLogs   ActivityLog[]
+  subscriptions  Subscription[]
+  employee       Employee?
+  auditLogs      AuditLog[]       @relation("AuditAdmin")
+  creditTransactions CreditTransaction[]
+  invoices       Invoice[]
+  aiHistories    AiHistory[]
+  tokenUsageLogs TokenUsageLog[]
+  searchQueryLogs SearchQueryLog[]
+
+  @@index([email])
+  @@index([role])
+  @@index([accountType])
+  @@index([isActive])
+  @@map("users")
+}
+
+// =============================================================================
+// MODEL: UserPreferences
+// =============================================================================
+
+model UserPreferences {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @unique @db.Uuid
+
+  preferredRoles       String[]
+  preferredLocations   String[]
+  preferredIndustries  String[]
+  preferredCompanySize String[]
+
+  openToRemote Boolean @default(true)
+  openToHybrid Boolean @default(true)
+  openToOnsite Boolean @default(true)
+
+  employmentTypes EmploymentType[]
+
+  minimumSalary  Decimal? @db.Decimal(12, 2)
+  maximumSalary  Decimal? @db.Decimal(12, 2)
+  salaryCurrency String   @default("INR")
+
+  visaSponsorshipNeeded Boolean @default(false)
+  preferredExperience   String?
+  preferredShift        String?
+
+  automationEnabled Boolean @default(true)
+  dailyEmailAlerts  Boolean @default(true)
+  applicationAlerts Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+// =============================================================================
+// MODEL: Resume
+// =============================================================================
+
+model Resume {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+
+  fileName    String
+  storagePath String
+  fileSize    Int
+  mimeType    String
+  publicUrl   String?
+
+  version   Int     @default(1)
+  isDefault Boolean @default(false)
+
+  status ResumeStatus @default(ACTIVE)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analysis     ResumeAnalysis?
+  applications Application[]
+
+  @@index([userId])
+  @@index([isDefault])
+  @@index([status])
+  @@map("resumes")
+}
+
+// =============================================================================
+// MODEL: ResumeAnalysis
+// =============================================================================
+
+model ResumeAnalysis {
+  id       String @id @default(uuid()) @db.Uuid
+  resumeId String @unique @db.Uuid
+
+  atsScore        Int
+  formattingScore Int
+  keywordScore    Int
+  contactScore    Int
+  impactScore     Int
+
+  suggestions     Json
+  missingSkills   Json
+  matchedKeywords Json
+
+  jdMatchScore Int?
+  jdText       String? @db.Text
+
+  analysisDate DateTime @default(now())
+  modelUsed    String?
+  tokensUsed   Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@index([resumeId])
+  @@map("resume_analyses")
+}
+
+// =============================================================================
+// MODEL: Company
+// =============================================================================
+
+model Company {
+  id           String  @id @default(uuid()) @db.Uuid
+  name         String
+  website      String?
+  industry     String?
+  size         String?
+  headquarters String?
+  linkedinUrl  String?
+  careerPage   String?
+  logoUrl      String?
+  description  String? @db.Text
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  jobs Job[]
+  jobImportSources JobImportSource[]
+
+  @@index([name])
+  @@index([industry])
+  @@map("companies")
+}
+
+// =============================================================================
+// MODEL: Job
+// =============================================================================
+
+model Job {
+  id        String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+
+  title      String
+  location   String?
+  remoteMode RemoteMode @default(ONSITE)
+
+  salaryMin      Decimal? @db.Decimal(12, 2)
+  salaryMax      Decimal? @db.Decimal(12, 2)
+  salaryCurrency String   @default("INR")
+
+  experienceRequired String?
+  description        String?        @db.Text
+  requirements       Json?
+  benefits           Json?
+  skills             String[]
+  employmentType     EmploymentType @default(FULL_TIME)
+
+  sourceUrl  String?
+  applyUrl   String?
+  sourceName String?
+
+  status    JobStatus @default(ACTIVE)
+  expiresAt DateTime?
+  postedAt  DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  company      Company       @relation(fields: [companyId], references: [id])
+  applications Application[]
+
+  @@index([companyId])
+  @@index([title])
+  @@index([status])
+  @@index([remoteMode])
+  @@index([employmentType])
+  @@map("jobs")
+}
+
+// =============================================================================
+// MODEL: Application
+// =============================================================================
+
+model Application {
+  id                 String  @id @default(uuid()) @db.Uuid
+  userId             String  @db.Uuid
+  jobId              String  @db.Uuid
+  resumeId           String? @db.Uuid
+  assignedEmployeeId String? @db.Uuid
+
+  status      ApplicationStatus @default(PENDING)
+  appliedAt   DateTime?
+  completedAt DateTime?
+
+  notes                  String? @db.Text
+  confirmationScreenshot String?
+  confirmationEmailUrl   String?
+
+  interviewDate   DateTime?
+  offerAmount     Decimal?  @db.Decimal(12, 2)
+  rejectionReason String?   @db.Text
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user             User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job              Job                   @relation(fields: [jobId], references: [id])
+  resume           Resume?               @relation(fields: [resumeId], references: [id])
+  assignedEmployee Employee?             @relation(fields: [assignedEmployeeId], references: [id])
+  timeline         ApplicationTimeline[]
+
+  @@index([userId])
+  @@index([jobId])
+  @@index([status])
+  @@index([assignedEmployeeId])
+  @@index([appliedAt])
+  @@map("applications")
+}
+
+// =============================================================================
+// MODEL: ApplicationTimeline
+// =============================================================================
+
+model ApplicationTimeline {
+  id            String @id @default(uuid()) @db.Uuid
+  applicationId String @db.Uuid
+
+  status      ApplicationStatus
+  description String            @db.Text
+  createdById String?           @db.Uuid
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([createdAt])
+  @@map("application_timeline")
+}
+
+// =============================================================================
+// MODEL: Employee
+// =============================================================================
+
+model Employee {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @unique @db.Uuid
+
+  employeeCode String         @unique
+  department   String?
+  designation  String?
+  joinedAt     DateTime?
+  status       EmployeeStatus @default(ACTIVE)
+
+  totalApplications Int      @default(0)
+  successRate       Decimal? @db.Decimal(5, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applications Application[]
+
+  @@index([status])
+  @@index([employeeCode])
+  @@map("employees")
+}
+
+// =============================================================================
+// MODEL: SubscriptionPlan
+// =============================================================================
+
+model SubscriptionPlan {
+  id   String @id @default(uuid()) @db.Uuid
+  slug String @unique
+  name String
+
+  description  String   @db.Text
+  monthlyPrice Decimal  @db.Decimal(10, 2)
+  yearlyPrice  Decimal? @db.Decimal(10, 2)
+  currency     String   @default("INR")
+
+  jobCredits      Int
+  aiCredits       Int
+  resumeCredits   Int
+  atsCredits      Int
+  maxApplications Int
+
+  features   Json
+  atsEnabled Boolean @default(false)
+
+  status       PlanStatus @default(ACTIVE)
+  displayOrder Int        @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions Subscription[]
+
+  @@index([slug])
+  @@index([status])
+  @@map("subscription_plans")
+}
+
+// =============================================================================
+// MODEL: Subscription
+// =============================================================================
+
+model Subscription {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  planId String @db.Uuid
+
+  startDate DateTime
+  expiresAt DateTime
+  autoRenew Boolean  @default(true)
+
+  remainingJobCredits    Int
+  remainingAiCredits     Int
+  remainingResumeCredits Int
+  remainingAtsCredits    Int
+
+  status             SubscriptionStatus @default(ACTIVE)
+  cancelledAt        DateTime?
+  cancellationReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan     SubscriptionPlan @relation(fields: [planId], references: [id])
+  payments Payment[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("subscriptions")
+}
+
+// =============================================================================
+// MODEL: Payment
+// =============================================================================
+
+model Payment {
+  id             String @id @default(uuid()) @db.Uuid
+  subscriptionId String @db.Uuid
+
+  amount        Decimal        @db.Decimal(10, 2)
+  currency      String         @default("INR")
+  paymentMethod PaymentMethod?
+  
+  discountAmount Decimal?      @db.Decimal(10, 2)
+  taxAmount      Decimal?      @db.Decimal(10, 2)
+  couponId       String?       @db.Uuid
+
+  transactionId    String? @unique
+  invoiceNumber    String? @unique
+  gatewayOrderId   String?
+  gatewayPaymentId String?
+
+  status        PaymentStatus @default(PENDING)
+  paidAt        DateTime?
+  failureReason String?
+  invoiceUrl    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+  coupon       Coupon?      @relation(fields: [couponId], references: [id])
+  refunds      Refund[]
+  invoice      Invoice?
+
+  @@index([subscriptionId])
+  @@index([transactionId])
+  @@index([status])
+  @@index([paidAt])
+  @@map("payments")
+}
+
+// =============================================================================
+// MODEL: Notification
+// =============================================================================
+
+model Notification {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+
+  type      NotificationType
+  title     String
+  message   String           @db.Text
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  actionUrl String?
+  metadata  Json?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([type])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// =============================================================================
+// MODEL: ChatSession
+// =============================================================================
+
+model ChatSession {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+
+  title      String  @default("New Chat")
+  isArchived Boolean @default(false)
+  isPinned   Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("chat_sessions")
+}
+
+// =============================================================================
+// MODEL: ChatMessage
+// =============================================================================
+
+model ChatMessage {
+  id        String @id @default(uuid()) @db.Uuid
+  sessionId String @db.Uuid
+
+  role    String
+  content String @db.Text
+
+  promptTokens     Int?
+  completionTokens Int?
+  totalTokens      Int?
+  modelUsed        String?
+  feedback         Int?
+
+  createdAt DateTime @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([createdAt])
+  @@map("chat_messages")
+}
+
+// =============================================================================
+// MODEL: SupportTicket
+// =============================================================================
+
+model SupportTicket {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+
+  subject    String
+  category   TicketCategory
+  priority   TicketPriority @default(MEDIUM)
+  status     TicketStatus   @default(OPEN)
+  resolvedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replies SupportReply[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([priority])
+  @@map("support_tickets")
+}
+
+// =============================================================================
+// MODEL: SupportReply
+// =============================================================================
+
+model SupportReply {
+  id       String @id @default(uuid()) @db.Uuid
+  ticketId String @db.Uuid
+
+  message     String  @db.Text
+  repliedById String? @db.Uuid
+  isStaff     Boolean @default(false)
+  attachments Json?
+
+  createdAt DateTime @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@map("support_replies")
+}
+
+// =============================================================================
+// MODEL: ActivityLog
+// =============================================================================
+
+model ActivityLog {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+
+  action      String
+  module      String
+  description String?
+
+  ipAddress String?
+  device    String?
+  browser   String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+  @@index([module])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+// =============================================================================
+// MODEL: SystemSettings
+// =============================================================================
+
+model SystemSettings {
+  id          String  @id @default(uuid()) @db.Uuid
+  key         String  @unique
+  value       String  @db.Text
+  description String?
+  isPublic    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+  @@map("system_settings")
+}
+
+// =============================================================================
+// MODEL: AuditLog
+// =============================================================================
+
+model AuditLog {
+  id      String @id @default(uuid()) @db.Uuid
+  adminId String @db.Uuid
+
+  module     String
+  action     String
+  targetId   String?
+  targetType String?
+
+  oldValue  Json?
+  newValue  Json?
+  ipAddress String?
+
+  createdAt DateTime @default(now())
+
+  admin User @relation("AuditAdmin", fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([module])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// =============================================================================
+// MODEL: CreditTransaction
+// =============================================================================
+
+model CreditTransaction {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+
+  feature       String
+  creditsBefore Int
+  creditsUsed   Int
+  creditsAfter  Int
+
+  reason      String
+  referenceId String?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([feature])
+  @@index([createdAt])
+  @@map("credit_transactions")
+}
+
+// =============================================================================
+// MODEL: Coupon
+// =============================================================================
+
+model Coupon {
+  id     String @id @default(uuid()) @db.Uuid
+  code   String @unique
+
+  percentageDiscount Decimal? @db.Decimal(5, 2)
+  fixedDiscount      Decimal? @db.Decimal(10, 2)
+  
+  minimumAmount Decimal? @db.Decimal(10, 2)
+  maxUsage      Int?
+  usageCount    Int      @default(0)
+  perUserLimit  Int      @default(1)
+
+  expiresAt     DateTime?
+  isActive      Boolean   @default(true)
+  applicablePlans String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payments Payment[]
+
+  @@index([code])
+  @@index([isActive])
+  @@map("coupons")
+}
+
+// =============================================================================
+// MODEL: Refund
+// =============================================================================
+
+model Refund {
+  id        String @id @default(uuid()) @db.Uuid
+  paymentId String @db.Uuid
+
+  amount          Decimal @db.Decimal(10, 2)
+  reason          String?
+  providerRefundId String?
+  status          String  @default("COMPLETED")
+  refundDate      DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([providerRefundId])
+  @@map("refunds")
+}
+
+// =============================================================================
+// MODEL: Invoice
+// =============================================================================
+
+model Invoice {
+  id            String @id @default(uuid()) @db.Uuid
+  paymentId     String @unique @db.Uuid
+  userId        String @db.Uuid
+
+  invoiceNumber String @unique
+  amount        Decimal @db.Decimal(10, 2)
+  tax           Decimal? @db.Decimal(10, 2)
+  discount      Decimal? @db.Decimal(10, 2)
+  currency      String  @default("INR")
+
+  billingAddress Json?
+  status         String @default("PAID")
+  pdfPath        String?
+  invoiceDate    DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceNumber])
+  @@index([userId])
+  @@map("invoices")
+}
+
+// =============================================================================
+// MODEL: WebhookLog
+// =============================================================================
+
+model WebhookLog {
+  id        String @id @default(uuid()) @db.Uuid
+  provider  String
+  eventId   String @unique
+  eventType String
+  payload   Json
+
+  processedAt DateTime @default(now())
+  status      String   @default("SUCCESS")
+
+  @@index([eventId])
+  @@map("webhook_logs")
+}
+
+// =============================================================================
+// MODEL: PromptTemplate
+// =============================================================================
+
+model PromptTemplate {
+  id          String @id @default(uuid()) @db.Uuid
+  featureName String @unique
+  description String?
+
+  systemPrompt    String? @db.Text
+  developerPrompt String? @db.Text
+  userPrompt      String  @db.Text
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([featureName])
+  @@map("prompt_templates")
+}
+
+// =============================================================================
+// MODEL: AiHistory
+// =============================================================================
+
+model AiHistory {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+
+  feature      String
+  provider     String
+  prompt       Json?
+  response     Json?
+  status       String   @default("SUCCESS")
+
+  executionTimeMs Int?
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([feature])
+  @@index([status])
+  @@index([createdAt])
+  @@map("ai_history")
+}
+
+// =============================================================================
+// MODEL: TokenUsageLog
+// =============================================================================
+
+model TokenUsageLog {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+
+  feature          String
+  provider         String
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  totalTokens      Int      @default(0)
+  creditsUsed      Int      @default(0)
+  costEstimate     Decimal? @db.Decimal(10, 4)
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([feature])
+  @@index([createdAt])
+  @@map("token_usage_logs")
+}
+
+// =============================================================================
+// MODEL: KnowledgeDocument
+// =============================================================================
+
+model KnowledgeDocument {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String
+  sourceUrl   String?
+  content     String   @db.Text
+  category    String?  // FAQ, Pricing, Blog, etc.
+  isPublished Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  chunks      KnowledgeChunk[]
+
+  @@index([category])
+  @@map("knowledge_documents")
+}
+
+// =============================================================================
+// MODEL: KnowledgeChunk
+// =============================================================================
+
+model KnowledgeChunk {
+  id          String   @id @default(uuid()) @db.Uuid
+  documentId  String   @db.Uuid
+
+  chunkIndex  Int
+  content     String   @db.Text
+  
+  // Usually this would be Unsupported("vector(1536)") but since we don't have pgvector guaranteed
+  // we'll store as JSON for mock or rely on external DB. If we use a separate vector DB, we just store the ID here.
+  embedding   Json?
+
+  document    KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@map("knowledge_chunks")
+}
+
+// =============================================================================
+// MODEL: JobImportSource
+// =============================================================================
+
+model JobImportSource {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @db.Uuid
+
+  provider  String   // GREENHOUSE, LEVER, ASHBY, WORKDAY
+  boardUrl  String
+  
+  isActive  Boolean  @default(true)
+  lastRunAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  logs      JobImportLog[]
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("job_import_sources")
+}
+
+// =============================================================================
+// MODEL: JobImportLog
+// =============================================================================
+
+model JobImportLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  sourceId    String   @db.Uuid
+
+  status      String   // SUCCESS, FAILED
+  jobsAdded   Int      @default(0)
+  jobsUpdated Int      @default(0)
+  errorMessage String? @db.Text
+
+  createdAt   DateTime @default(now())
+
+  source      JobImportSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([sourceId])
+  @@index([status])
+  @@map("job_import_logs")
+}
+
+// =============================================================================
+// MODEL: SearchQueryLog
+// =============================================================================
+
+model SearchQueryLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @db.Uuid
+  query     String
+  
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([query])
+  @@index([createdAt])
+  @@map("search_query_logs")
+}
