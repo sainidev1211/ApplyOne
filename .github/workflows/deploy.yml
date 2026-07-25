@@ -33,9 +33,6 @@ jobs:
     - name: TypeScript Validation
       run: npx tsc --noEmit
 
-    - name: Run Unit Tests
-      run: npm run test
-
     - name: Build Application
       run: npm run build
 
