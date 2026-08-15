@@ -19,9 +19,9 @@ export const APP_METADATA = {
   title: 'ApplyOne - Apply Once. Reach Everywhere.',
   description: 'The ultimate SaaS platform for students, freshers, and professionals to automate and optimize their job search and internship search. Apply once and access opportunities everywhere.',
   url: 'https://applyone.co',
-  ogImage: '/images/og-image.jpg',
+  ogImage: '/logo.png',
   twitterHandle: '@ApplyOneHQ',
-  contactEmail: 'support@applyone.co',
+  contactEmail: 'supportapplyone@gmail.com',
 };
 
 export const ROUTES = {
@@ -65,7 +65,7 @@ export const NAVIGATION_LINKS = {
       { label: 'Terms & Conditions', href: '/terms' },
     ],
     contact: [
-      { label: 'Contact Support', href: 'mailto:support@applyone.co' },
+      { label: 'Contact Support', href: 'mailto:supportapplyone@gmail.com' },
       { label: 'FAQs', href: '#faqs' },
     ],
   },

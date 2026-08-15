@@ -90,7 +90,7 @@ export default function PrivacyPolicy() {
                 6. Contact Information
               </h2>
               <p className="text-sm md:text-base text-text-secondary-light dark:text-text-secondary-dark leading-relaxed">
-                If you have questions about this privacy policy or wish to exercise any of your rights, please reach out to our privacy compliance desk at <a href="mailto:privacy@applyone.co" className="text-primary hover:underline font-semibold">privacy@applyone.co</a>.
+                If you have questions about this privacy policy or wish to exercise any of your rights, please reach out to our privacy compliance desk at <a href="mailto:supportapplyone@gmail.com" className="text-primary hover:underline font-semibold">supportapplyone@gmail.com</a>.
               </p>
             </section>
           </Card>

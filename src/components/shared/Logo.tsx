@@ -12,52 +12,16 @@ export function Logo({
   showText = true,
   showTagline = false,
   className = '',
-  iconSize = 'h-8 w-8',
+  iconSize = 'h-9 w-9',
   textClass = 'text-xl',
 }: LogoProps) {
-  const logoIcon = (
-    <svg
-      className={`${iconSize} flex-shrink-0`}
-      viewBox="0 0 100 100"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient id="applyone-logo-grad" x1="0%" y1="100%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#2563eb" /> {/* Royal Blue */}
-          <stop offset="100%" stopColor="#06b6d4" /> {/* Violet/Purple */}
-        </linearGradient>
-      </defs>
-      
-      {/* Main Stylized A Ribbon */}
-      <path
-        d="M20 78L45 28C47 24 53 24 55 28L80 78C82 82 78 86 73 84L60 78L52 62"
-        stroke="url(#applyone-logo-grad)"
-        strokeWidth="11"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      
-      {/* Swoosh cutting through the A */}
-      <path
-        d="M26 80C42 70 65 52 82 34"
-        stroke="url(#applyone-logo-grad)"
-        strokeWidth="6"
-        strokeLinecap="round"
-      />
-      
-      {/* Sparkle Star at top-right */}
-      <path
-        d="M84 25C84.5 21 86 19.5 90 19C86 18.5 84.5 17 84 13C83.5 17 82 18.5 78 19C82 19.5 83.5 21 84 25Z"
-        fill="url(#applyone-logo-grad)"
-      />
-    </svg>
-  );
-
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
-      {logoIcon}
+      <img
+        src="/logo.png"
+        alt="ApplyOne Logo"
+        className={`${iconSize} object-contain rounded-lg flex-shrink-0`}
+      />
       {showText && (
         <div className="flex flex-col text-left">
           <div className={`${textClass} font-sans font-extrabold tracking-tight leading-none`}>

@@ -541,7 +541,7 @@ export default function Dashboard() {
                 <h2 className="text-2xl md:text-3xl font-bold">Everything you need for the next strong application.</h2>
                 <p className="mt-2 text-sm text-slate-300 max-w-2xl">Practical guides, account help, and clear answers—kept separate from your application workspace.</p>
               </div>
-              <a href="mailto:support@applyone.co" className="inline-flex justify-center rounded-lg bg-white text-slate-900 px-4 py-2.5 text-sm font-semibold hover:bg-sky-50">Contact support</a>
+              <a href="mailto:supportapplyone@gmail.com" className="inline-flex justify-center rounded-lg bg-white text-slate-900 px-4 py-2.5 text-sm font-semibold hover:bg-sky-50">Contact support</a>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-white/10">
@@ -562,7 +562,7 @@ export default function Dashboard() {
               <div className="flex flex-wrap gap-3 text-sm">
                 <a href="/privacy" className="text-sky-300 hover:text-white">Privacy</a>
                 <a href="/terms" className="text-sky-300 hover:text-white">Terms</a>
-                <a href="mailto:support@applyone.co" className="text-sky-300 hover:text-white">Support</a>
+                <a href="mailto:supportapplyone@gmail.com" className="text-sky-300 hover:text-white">Support</a>
               </div>
             </div>
             <div className="p-7 space-y-4">
