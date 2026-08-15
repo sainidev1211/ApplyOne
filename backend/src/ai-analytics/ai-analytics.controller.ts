@@ -15,7 +15,9 @@ export class AiAnalyticsController {
   constructor(private readonly analyticsService: AiAnalyticsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Admin: Get complete AI Analytics (Usage, Cost, ATS, Search)' })
+  @ApiOperation({
+    summary: 'Admin: Get complete AI Analytics (Usage, Cost, ATS, Search)',
+  })
   getAnalytics() {
     return this.analyticsService.getGlobalAnalytics();
   }

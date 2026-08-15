@@ -72,7 +72,7 @@ export default function Subscriptions() {
         {/* Active plan overview card */}
         <Card className="p-6 md:col-span-2 border border-border-light dark:border-border-dark bg-white dark:bg-card-dark relative overflow-hidden flex flex-col justify-between shadow-md">
           {/* Subtle brand gradient background glow */}
-          <div className="absolute top-0 right-0 h-40 w-40 bg-gradient-to-bl from-blue-600/10 to-purple-600/10 rounded-full filter blur-xl pointer-events-none" />
+          <div className="absolute top-0 right-0 h-40 w-40 bg-gradient-to-bl from-blue-600/10 to-cyan-600/10 rounded-full filter blur-xl pointer-events-none" />
           
           <div>
             <div className="flex items-center justify-between mb-4">

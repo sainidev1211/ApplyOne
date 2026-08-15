@@ -6,15 +6,24 @@ import { CreditsService } from '../../credits/credits.service.js';
 export class AiCreditValidationService {
   constructor(
     private readonly featureAccess: FeatureAccessService,
-    private readonly creditsService: CreditsService
+    private readonly creditsService: CreditsService,
   ) {}
 
-  async validateAndDeduct(userId: string, featureName: string, requiredCredits: number = 1): Promise<boolean> {
+  async validateAndDeduct(
+    userId: string,
+    featureName: string,
+    requiredCredits: number = 1,
+  ): Promise<boolean> {
     // 1. Check feature access and credits in one go (assuming AI features map to 'aiCredits')
-    const access = await this.featureAccess.canAccessFeature(userId, 'aiCredits');
-    
+    const access = await this.featureAccess.canAccessFeature(
+      userId,
+      'aiCredits',
+    );
+
     if (!access.allowed || access.remainingCredits < requiredCredits) {
-      throw new BadRequestException(`Access Denied: Insufficient AI Credits or feature locked`);
+      throw new BadRequestException(
+        `Access Denied: Insufficient AI Credits or feature locked`,
+      );
     }
 
     // 3. Deduct the credits
@@ -22,7 +31,7 @@ export class AiCreditValidationService {
       userId,
       feature: 'aiCredits',
       amount: requiredCredits,
-      reason: `Used feature: ${featureName}`
+      reason: `Used feature: ${featureName}`,
     });
 
     return true;

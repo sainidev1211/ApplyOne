@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { GeminiProvider } from '../providers/gemini.provider.js';
 import { AiPromptsService } from '../prompts/ai-prompts.service.js';
 import { AiHistoryService } from '../history/ai-history.service.js';
@@ -21,7 +25,7 @@ export class AiService {
     private readonly promptsService: AiPromptsService,
     private readonly historyService: AiHistoryService,
     private readonly tokenUsage: TokenUsageService,
-    private readonly creditValidation: AiCreditValidationService
+    private readonly creditValidation: AiCreditValidationService,
   ) {}
 
   async executeFeature(params: ExecuteAiParams) {
@@ -33,14 +37,29 @@ export class AiService {
     try {
       // 1. Credit Validation
       const creditsToDeduct = params.requiredCredits || 1;
-      await this.creditValidation.validateAndDeduct(params.userId, params.featureName, creditsToDeduct);
+      await this.creditValidation.validateAndDeduct(
+        params.userId,
+        params.featureName,
+        creditsToDeduct,
+      );
 
       // 2. Fetch and Interpolate Prompt
-      const template = await this.promptsService.getTemplate(params.featureName);
-      
-      const systemPrompt = this.promptsService.interpolate(template.systemPrompt, params.variables);
-      const developerPrompt = this.promptsService.interpolate(template.developerPrompt, params.variables);
-      const userPrompt = this.promptsService.interpolate(template.userPrompt, params.variables);
+      const template = await this.promptsService.getTemplate(
+        params.featureName,
+      );
+
+      const systemPrompt = this.promptsService.interpolate(
+        template.systemPrompt,
+        params.variables,
+      );
+      const developerPrompt = this.promptsService.interpolate(
+        template.developerPrompt,
+        params.variables,
+      );
+      const userPrompt = this.promptsService.interpolate(
+        template.userPrompt,
+        params.variables,
+      );
 
       promptObj = { systemPrompt, developerPrompt, userPrompt };
 
@@ -50,7 +69,7 @@ export class AiService {
         developerPrompt,
         userPrompt,
         temperature: params.temperature,
-        maxTokens: params.maxTokens
+        maxTokens: params.maxTokens,
       });
 
       responseObj = { content: result.content };
@@ -63,7 +82,7 @@ export class AiService {
         promptTokens: result.usage.promptTokens,
         completionTokens: result.usage.completionTokens,
         totalTokens: result.usage.totalTokens,
-        creditsUsed: creditsToDeduct
+        creditsUsed: creditsToDeduct,
       });
 
       // 5. Parse JSON response if necessary (Assume AI is asked to return JSON for complex features)
@@ -84,7 +103,6 @@ export class AiService {
       }
 
       return finalContent;
-
     } catch (error: any) {
       status = 'FAILED';
       responseObj = { error: error.message, stack: error.stack };
@@ -99,7 +117,7 @@ export class AiService {
         prompt: promptObj,
         response: responseObj,
         status,
-        executionTimeMs: executionTime
+        executionTimeMs: executionTime,
       });
     }
   }

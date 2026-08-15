@@ -9,6 +9,12 @@ import { CouponsService } from '../coupons/coupons.service.js';
 
 @Module({
   controllers: [PaymentsController],
-  providers: [PrismaService, PaymentsService, StripeProvider, RazorpayProvider, CouponsService]
+  providers: [
+    PrismaService,
+    PaymentsService,
+    StripeProvider,
+    RazorpayProvider,
+    CouponsService,
+  ],
 })
 export class PaymentsModule {}

@@ -1,19 +1,26 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Patch, 
-  Delete, 
-  Param, 
-  Body, 
-  UseGuards, 
-  Request, 
-  UseInterceptors, 
-  UploadedFile, 
-  BadRequestException 
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  Request,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiConsumes,
+} from '@nestjs/swagger';
 import { ResumeService } from './resume.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { UpdateResumeDto } from './dto/update-resume.dto.js';
@@ -30,8 +37,8 @@ export class ResumeController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('resume'))
   async uploadResume(
-    @Request() req: any, 
-    @UploadedFile() file: Express.Multer.File
+    @Request() req: any,
+    @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
@@ -51,22 +58,31 @@ export class ResumeController {
     return this.resumeService.getResumeHistory(req.user.id);
   }
 
+  @Get(':id/download')
+  @ApiOperation({ summary: 'Download the authenticated user resume' })
+  async downloadResume(@Request() req: any, @Param('id') id: string, @Res() res: Response) {
+    const { resume, filePath } = await this.resumeService.getDownload(req.user.id, id);
+    res.setHeader('Content-Type', resume.mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${String(resume.fileName).replace(/"/g, '')}"`);
+    return res.sendFile(filePath, { root: process.cwd() });
+  }
+
   @Patch(':id/default')
   @ApiOperation({ summary: 'Set resume as default' })
   async setDefaultResume(
-    @Request() req: any, 
+    @Request() req: any,
     @Param('id') id: string,
-    @Body() updateResumeDto: UpdateResumeDto
+    @Body() updateResumeDto: UpdateResumeDto,
   ) {
-    return this.resumeService.updateResume(req.user.id, id, { ...updateResumeDto, isDefault: true });
+    return this.resumeService.updateResume(req.user.id, id, {
+      ...updateResumeDto,
+      isDefault: true,
+    });
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a resume' })
-  async deleteResume(
-    @Request() req: any, 
-    @Param('id') id: string
-  ) {
+  async deleteResume(@Request() req: any, @Param('id') id: string) {
     return this.resumeService.deleteResume(req.user.id, id);
   }
 }

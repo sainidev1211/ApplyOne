@@ -1,7 +1,18 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service.js';
 import { ActivityLoggerService } from '../common/services/activity-logger.service.js';
-import { CreateApplicationDto, AssignEmployeeDto, UpdateStatusDto, AddNoteDto, ApplicationQueryDto } from './dto/application.dto.js';
+import {
+  CreateApplicationDto,
+  AssignEmployeeDto,
+  UpdateStatusDto,
+  AddNoteDto,
+  ApplicationQueryDto,
+} from './dto/application.dto.js';
 import { UserRole, ApplicationStatus, Prisma } from '@prisma/client';
 
 @Injectable()
@@ -15,12 +26,18 @@ export class ApplicationsService {
     const job = await this.prisma.job.findUnique({ where: { id: data.jobId } });
     if (!job) throw new NotFoundException('Job not found');
 
-    const activeResume = data.resumeId 
-      ? await this.prisma.resume.findUnique({ where: { id: data.resumeId, userId } })
-      : await this.prisma.resume.findFirst({ where: { userId, isDefault: true } });
+    const activeResume = data.resumeId
+      ? await this.prisma.resume.findUnique({
+          where: { id: data.resumeId, userId },
+        })
+      : await this.prisma.resume.findFirst({
+          where: { userId, isDefault: true },
+        });
 
     if (!activeResume) {
-      throw new BadRequestException('A resume is required to apply. Please upload one or specify resumeId.');
+      throw new BadRequestException(
+        'A resume is required to apply. Please upload one or specify resumeId.',
+      );
     }
 
     const existing = await this.prisma.application.findFirst({
@@ -48,7 +65,12 @@ export class ApplicationsService {
       },
     });
 
-    await this.activityLogger.log(userId, 'APPLICATION_CREATED', 'applications', `Applied for job ${job.title}`);
+    await this.activityLogger.log(
+      userId,
+      'APPLICATION_CREATED',
+      'applications',
+      `Applied for job ${job.title}`,
+    );
 
     return application;
   }
@@ -66,7 +88,9 @@ export class ApplicationsService {
     if (user.role === UserRole.USER) {
       where.userId = user.id;
     } else if (user.role === UserRole.EMPLOYEE) {
-      const emp = await this.prisma.employee.findUnique({ where: { userId: user.id } });
+      const emp = await this.prisma.employee.findUnique({
+        where: { userId: user.id },
+      });
       if (emp) where.assignedEmployeeId = emp.id;
     }
 
@@ -75,7 +99,11 @@ export class ApplicationsService {
         where,
         skip,
         take: limit,
-        include: { job: { include: { company: true } }, user: true, assignedEmployee: { include: { user: true } } },
+        include: {
+          job: { include: { company: true } },
+          user: true,
+          assignedEmployee: { include: { user: true } },
+        },
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.application.count({ where }),
@@ -90,9 +118,9 @@ export class ApplicationsService {
   async findOne(id: string, user: any) {
     const application = await this.prisma.application.findUnique({
       where: { id },
-      include: { 
-        job: { include: { company: true } }, 
-        user: true, 
+      include: {
+        job: { include: { company: true } },
+        user: true,
         assignedEmployee: { include: { user: true } },
         timeline: { orderBy: { createdAt: 'desc' } },
         resume: true,
@@ -104,7 +132,10 @@ export class ApplicationsService {
     if (user.role === UserRole.USER && application.userId !== user.id) {
       throw new ForbiddenException('Access denied');
     }
-    if (user.role === UserRole.EMPLOYEE && application.assignedEmployee?.userId !== user.id) {
+    if (
+      user.role === UserRole.EMPLOYEE &&
+      application.assignedEmployee?.userId !== user.id
+    ) {
       throw new ForbiddenException('Access denied');
     }
 
@@ -112,17 +143,21 @@ export class ApplicationsService {
   }
 
   async assignEmployee(id: string, data: AssignEmployeeDto, adminId: string) {
-    const application = await this.prisma.application.findUnique({ where: { id } });
+    const application = await this.prisma.application.findUnique({
+      where: { id },
+    });
     if (!application) throw new NotFoundException('Application not found');
 
-    const employee = await this.prisma.employee.findUnique({ where: { id: data.employeeId } });
+    const employee = await this.prisma.employee.findUnique({
+      where: { id: data.employeeId },
+    });
     if (!employee || employee.status !== 'ACTIVE') {
       throw new BadRequestException('Invalid or inactive employee');
     }
 
     const updated = await this.prisma.application.update({
       where: { id },
-      data: { 
+      data: {
         assignedEmployeeId: employee.id,
         status: ApplicationStatus.ASSIGNED,
       },
@@ -137,13 +172,20 @@ export class ApplicationsService {
       },
     });
 
-    await this.activityLogger.log(adminId, 'EMPLOYEE_ASSIGNED', 'applications', `Assigned application ${id} to ${employee.employeeCode}`);
+    await this.activityLogger.log(
+      adminId,
+      'EMPLOYEE_ASSIGNED',
+      'applications',
+      `Assigned application ${id} to ${employee.employeeCode}`,
+    );
 
     return updated;
   }
 
   async updateStatus(id: string, data: UpdateStatusDto, actorId: string) {
-    const application = await this.prisma.application.findUnique({ where: { id } });
+    const application = await this.prisma.application.findUnique({
+      where: { id },
+    });
     if (!application) throw new NotFoundException('Application not found');
 
     const updated = await this.prisma.application.update({
@@ -164,7 +206,9 @@ export class ApplicationsService {
   }
 
   async addNote(id: string, data: AddNoteDto, actorId: string) {
-    const application = await this.prisma.application.findUnique({ where: { id } });
+    const application = await this.prisma.application.findUnique({
+      where: { id },
+    });
     if (!application) throw new NotFoundException('Application not found');
 
     const previousNotes = application.notes ? application.notes + '\n\n' : '';
@@ -182,7 +226,9 @@ export class ApplicationsService {
   }
 
   async remove(id: string, user: any) {
-    const application = await this.prisma.application.findUnique({ where: { id } });
+    const application = await this.prisma.application.findUnique({
+      where: { id },
+    });
     if (!application) throw new NotFoundException('Application not found');
 
     if (user.role === UserRole.USER && application.userId !== user.id) {

@@ -13,18 +13,18 @@ export default function PrivacyPolicy() {
     <>
       <SEO 
         title="Privacy Policy | ApplyOne" 
-        description="Learn how ApplyOne secures your profile, resume, and credentials under industry-standard Supabase RLS database configurations." 
+        description="Learn how ApplyOne secures your profile, resume, and credentials with industry-standard database safeguards."
       />
       <div className="py-20 bg-bg-light dark:bg-bg-dark min-h-screen transition-colors duration-300 relative overflow-hidden text-left">
         {/* Background blobs */}
         <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-blue-500/5 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-purple-500/5 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-cyan-500/5 blur-3xl pointer-events-none" />
 
         <Container className="max-w-4xl relative z-10">
           <div className="space-y-4 mb-10">
             <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-text-primary-light dark:text-text-primary-dark">
               Privacy{' '}
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
                 Policy
               </span>
             </h1>
@@ -63,7 +63,7 @@ export default function PrivacyPolicy() {
                 3. How Your Data Is Secured
               </h2>
               <p className="text-sm md:text-base text-text-secondary-light dark:text-text-secondary-dark leading-relaxed">
-                We implement industry-grade encryption models and security architectures to secure candidate details. All data is synchronized via Supabase services configured under strict Row-Level Security (RLS) policies. This ensures that only you, your authorized agents, and matching recruiter endpoints can decrypt or view your documents.
+                We implement industry-grade encryption models and security architectures to secure candidate details. Access is restricted to authenticated users and authorized platform services.
               </p>
             </section>
 

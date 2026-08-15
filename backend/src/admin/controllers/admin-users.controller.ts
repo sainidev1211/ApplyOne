@@ -1,4 +1,14 @@
-import { Controller, Get, Patch, Post, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Post,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminUsersService } from '../services/admin-users.service.js';
 import { UpdateUserRoleDto } from '../dto/admin.dto.js';
@@ -30,7 +40,11 @@ export class AdminUsersController {
 
   @Patch(':id/role')
   @ApiOperation({ summary: 'Update user role' })
-  updateRole(@Request() req: any, @Param('id') id: string, @Body() dto: UpdateUserRoleDto) {
+  updateRole(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() dto: UpdateUserRoleDto,
+  ) {
     return this.adminUsersService.updateRole(req.user.id, id, dto);
   }
 

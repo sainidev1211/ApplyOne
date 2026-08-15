@@ -1,5 +1,9 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { IAiProvider, AiPromptRequest, AiPromptResponse } from './ai-provider.interface.js';
+import {
+  IAiProvider,
+  AiPromptRequest,
+  AiPromptResponse,
+} from './ai-provider.interface.js';
 import { GoogleGenAI } from '@google/genai';
 
 @Injectable()
@@ -30,13 +34,15 @@ export class GeminiProvider implements IAiProvider {
       // If developer prompt exists, we can prepend it to user prompt or add it to system instructions.
       // Gemini primarily uses systemInstruction. We will merge system and developer prompts if both exist.
       if (request.developerPrompt) {
-         config.systemInstruction = (config.systemInstruction ? config.systemInstruction + '\n\n' : '') + request.developerPrompt;
+        config.systemInstruction =
+          (config.systemInstruction ? config.systemInstruction + '\n\n' : '') +
+          request.developerPrompt;
       }
 
       const response = await this.ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: request.userPrompt,
-        config
+        config,
       });
 
       return {
@@ -45,11 +51,13 @@ export class GeminiProvider implements IAiProvider {
         usage: {
           promptTokens: response.usageMetadata?.promptTokenCount || 0,
           completionTokens: response.usageMetadata?.candidatesTokenCount || 0,
-          totalTokens: response.usageMetadata?.totalTokenCount || 0
-        }
+          totalTokens: response.usageMetadata?.totalTokenCount || 0,
+        },
       };
     } catch (error: any) {
-      throw new InternalServerErrorException(`Gemini Provider Error: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Gemini Provider Error: ${error.message}`,
+      );
     }
   }
 }

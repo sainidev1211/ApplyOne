@@ -11,7 +11,10 @@ import { mkdirSync } from 'fs';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const uploadPath = configService.get<string>('app.uploadPath', './uploads');
+        const uploadPath = configService.get<string>(
+          'app.uploadPath',
+          './uploads',
+        );
         const maxSizeMb = configService.get<number>('app.maxUploadSizeMb', 10);
 
         // Ensure upload directory exists

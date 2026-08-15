@@ -9,10 +9,13 @@ export class AdminSettingsService {
 
   async getAllSettings() {
     const settings = await this.prisma.systemSettings.findMany();
-    return settings.reduce((acc, curr) => {
-      acc[curr.key] = JSON.parse(curr.value);
-      return acc;
-    }, {} as Record<string, any>);
+    return settings.reduce(
+      (acc, curr) => {
+        acc[curr.key] = JSON.parse(curr.value);
+        return acc;
+      },
+      {} as Record<string, any>,
+    );
   }
 
   async updateSettings(adminId: string, dto: UpdateSettingsDto) {
@@ -27,7 +30,7 @@ export class AdminSettingsService {
             where: { key },
             update: { value: JSON.stringify(val) },
             create: { key, value: JSON.stringify(val) },
-          })
+          }),
         );
       }
     }

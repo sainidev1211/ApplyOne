@@ -5,6 +5,6 @@ import { InvoicesService } from './invoices.service.js';
 
 @Module({
   controllers: [InvoicesController],
-  providers: [PrismaService, InvoicesService]
+  providers: [PrismaService, InvoicesService],
 })
 export class InvoicesModule {}

@@ -14,7 +14,7 @@ export function AboutUs() {
         <div className="space-y-4 max-w-2xl mx-auto">
           <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-text-primary-light dark:text-text-primary-dark">
             Our{' '}
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
               Mission
             </span>
           </h2>
@@ -62,7 +62,7 @@ export function AboutUs() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="p-8 rounded-2xl bg-gradient-to-r from-blue-600/5 to-purple-600/5 border border-blue-500/10 dark:border-blue-500/5 text-center space-y-4"
+          className="p-8 rounded-2xl bg-gradient-to-r from-blue-600/5 to-cyan-600/5 border border-blue-500/10 dark:border-blue-500/5 text-center space-y-4"
         >
           <h4 className="text-lg font-bold text-text-primary-light dark:text-text-primary-dark">
             Join the automated hiring revolution.

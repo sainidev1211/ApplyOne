@@ -1,19 +1,24 @@
-import { 
-  Controller, 
-  Get, 
-  Patch, 
-  Delete, 
-  Body, 
-  UseGuards, 
-  Request, 
-  Query, 
-  Post, 
-  UseInterceptors, 
-  UploadedFile, 
-  BadRequestException 
+import {
+  Controller,
+  Get,
+  Patch,
+  Delete,
+  Body,
+  UseGuards,
+  Request,
+  Query,
+  Post,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiConsumes,
+} from '@nestjs/swagger';
 import { UsersService } from './users.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
@@ -48,7 +53,10 @@ export class UsersController {
 
   @Patch('profile')
   @ApiOperation({ summary: 'Update extended profile data' })
-  async updateProfile(@Request() req: any, @Body() updateProfileDto: UpdateProfileDto) {
+  async updateProfile(
+    @Request() req: any,
+    @Body() updateProfileDto: UpdateProfileDto,
+  ) {
     return this.usersService.updateProfile(req.user.id, updateProfileDto);
   }
 
@@ -78,8 +86,14 @@ export class UsersController {
 
   @Patch('preferences')
   @ApiOperation({ summary: 'Update user preferences' })
-  async updatePreferences(@Request() req: any, @Body() updatePreferencesDto: UpdatePreferencesDto) {
-    return this.usersService.updatePreferences(req.user.id, updatePreferencesDto);
+  async updatePreferences(
+    @Request() req: any,
+    @Body() updatePreferencesDto: UpdatePreferencesDto,
+  ) {
+    return this.usersService.updatePreferences(
+      req.user.id,
+      updatePreferencesDto,
+    );
   }
 
   @Get('statistics')
@@ -93,13 +107,13 @@ export class UsersController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('avatar'))
   async uploadAvatar(
-    @Request() req: any, 
-    @UploadedFile() file: Express.Multer.File
+    @Request() req: any,
+    @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
-    
+
     // Quick mime check, though Multer fileFilter in UploadsModule handles strict check
     if (!file.mimetype.startsWith('image/')) {
       throw new BadRequestException('File must be an image');

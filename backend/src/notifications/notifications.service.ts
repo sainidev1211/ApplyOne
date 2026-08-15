@@ -16,7 +16,7 @@ export interface SendNotificationDto {
 export class NotificationsService {
   constructor(
     @InjectQueue('notifications') private readonly notificationsQueue: Queue,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
   ) {}
 
   async notify(dto: SendNotificationDto) {
@@ -27,21 +27,27 @@ export class NotificationsService {
         type: dto.type,
         title: dto.title,
         message: dto.message,
-      }
+      },
     });
 
     // 2. Queue Email / Push / WhatsApp if requested
     if (dto.template) {
-      const user = await this.prisma.user.findUnique({ where: { id: dto.userId } });
+      const user = await this.prisma.user.findUnique({
+        where: { id: dto.userId },
+      });
       if (user && user.email) {
-        await this.notificationsQueue.add('sendEmail', {
-          to: user.email,
-          template: dto.template,
-          context: dto.context
-        }, {
-          attempts: 3,
-          backoff: { type: 'exponential', delay: 1000 }
-        });
+        await this.notificationsQueue.add(
+          'sendEmail',
+          {
+            to: user.email,
+            template: dto.template,
+            context: dto.context,
+          },
+          {
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 1000 },
+          },
+        );
       }
     }
   }

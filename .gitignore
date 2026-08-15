@@ -26,3 +26,8 @@ dist-ssr
 # Environment Files
 .env
 backend/.env
+
+# Uploads
+uploads/
+backend/uploads/*
+!backend/uploads/.gitkeep

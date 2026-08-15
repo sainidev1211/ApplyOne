@@ -199,7 +199,7 @@ export function Navbar() {
                   aria-haspopup="true"
                   aria-expanded={dropdownOpen}
                 >
-                  <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white text-sm font-semibold shadow-sm border border-white dark:border-slate-800">
+                  <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 flex items-center justify-center text-white text-sm font-semibold shadow-sm border border-white dark:border-slate-800">
                     {profile?.full_name ? getInitials(profile.full_name) : 'U'}
                   </div>
                 </button>
@@ -321,7 +321,7 @@ export function Navbar() {
               {user ? (
                 <div className="space-y-3">
                   <div className="flex items-center space-x-3 py-2">
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold">
                       {profile?.full_name ? getInitials(profile.full_name) : 'U'}
                     </div>
                     <div>

@@ -1,4 +1,14 @@
-import { Controller, Get, Patch, Post, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Post,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminEmployeesService } from '../services/admin-employees.service.js';
 import { CreateEmployeeDto, UpdateEmployeeDto } from '../dto/admin.dto.js';
@@ -36,7 +46,11 @@ export class AdminEmployeesController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update employee details' })
-  update(@Request() req: any, @Param('id') id: string, @Body() dto: UpdateEmployeeDto) {
+  update(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() dto: UpdateEmployeeDto,
+  ) {
     return this.adminEmployeesService.update(req.user.id, id, dto);
   }
 }

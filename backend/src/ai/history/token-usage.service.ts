@@ -31,8 +31,8 @@ export class TokenUsageService {
         completionTokens: params.completionTokens,
         totalTokens: params.totalTokens,
         creditsUsed: params.creditsUsed,
-        costEstimate: costEstimate
-      }
+        costEstimate: costEstimate,
+      },
     });
   }
 
@@ -43,26 +43,26 @@ export class TokenUsageService {
         _sum: {
           totalTokens: true,
           creditsUsed: true,
-          costEstimate: true
-        }
+          costEstimate: true,
+        },
       }),
       this.prisma.tokenUsageLog.groupBy({
         by: ['feature'],
         _sum: {
           totalTokens: true,
-          creditsUsed: true
+          creditsUsed: true,
         },
         orderBy: {
-          _sum: { totalTokens: 'desc' }
-        }
-      })
+          _sum: { totalTokens: 'desc' },
+        },
+      }),
     ]);
 
     return {
       totalTokens: totalUsage._sum.totalTokens || 0,
       totalCreditsUsed: totalUsage._sum.creditsUsed || 0,
       totalCostEstimate: totalUsage._sum.costEstimate || 0,
-      featureBreakdown
+      featureBreakdown,
     };
   }
 }

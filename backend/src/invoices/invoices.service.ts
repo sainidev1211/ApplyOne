@@ -9,14 +9,19 @@ export class InvoicesService {
     return this.prisma.invoice.findMany({
       where: { userId },
       orderBy: { invoiceDate: 'desc' },
-      include: { payment: { include: { subscription: { include: { plan: true } } } } }
+      include: {
+        payment: { include: { subscription: { include: { plan: true } } } },
+      },
     });
   }
 
   async getInvoiceById(userId: string, id: string) {
     const invoice = await this.prisma.invoice.findFirst({
       where: { id, userId },
-      include: { payment: { include: { subscription: { include: { plan: true } } } }, user: true }
+      include: {
+        payment: { include: { subscription: { include: { plan: true } } } },
+        user: true,
+      },
     });
 
     if (!invoice) throw new NotFoundException('Invoice not found');
@@ -26,7 +31,10 @@ export class InvoicesService {
   async getAllInvoices() {
     return this.prisma.invoice.findMany({
       orderBy: { invoiceDate: 'desc' },
-      include: { user: true, payment: { include: { subscription: { include: { plan: true } } } } }
+      include: {
+        user: true,
+        payment: { include: { subscription: { include: { plan: true } } } },
+      },
     });
   }
 }

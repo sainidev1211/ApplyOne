@@ -142,7 +142,7 @@ export function Reviews() {
       
       {/* Background decorations */}
       <div className="absolute top-1/4 left-1/4 w-[300px] h-[300px] rounded-full bg-blue-500/5 dark:bg-blue-600/5 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full bg-purple-500/5 dark:bg-purple-600/5 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] rounded-full bg-cyan-500/5 dark:bg-cyan-600/5 blur-3xl pointer-events-none" />
 
       <Container>
         {/* Section Header */}
@@ -150,7 +150,7 @@ export function Reviews() {
           <div className="space-y-4 max-w-2xl">
             <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-text-primary-light dark:text-text-primary-dark">
               Trusted by{' '}
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
                 Thousands
               </span>
             </h2>
@@ -267,7 +267,7 @@ export function Reviews() {
 
                   {/* Profile Signature */}
                   <div className="flex items-center gap-3 pt-6 border-t border-border-light dark:border-border-dark/60 mt-6">
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-semibold shadow-inner flex-shrink-0">
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 flex items-center justify-center text-white text-xs font-semibold shadow-inner flex-shrink-0">
                       {review.avatar}
                     </div>
                     <div className="min-w-0 text-left">

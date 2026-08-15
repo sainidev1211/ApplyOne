@@ -18,7 +18,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       outline: 'border border-border-light dark:border-border-dark bg-transparent text-text-primary-light dark:text-text-primary-dark hover:bg-bg-alt-light dark:hover:bg-bg-alt-dark',
       ghost: 'bg-transparent text-text-primary-light dark:text-text-primary-dark hover:bg-bg-alt-light dark:hover:bg-bg-alt-dark',
       link: 'bg-transparent text-primary hover:underline p-0 focus:ring-0 focus:ring-offset-0 hover:scale-100 active:scale-100',
-      gradient: 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-md focus:ring-purple-500',
+      gradient: 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 shadow-md focus:ring-cyan-500',
     };
 
     const sizes = {

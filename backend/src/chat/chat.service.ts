@@ -9,13 +9,13 @@ export class ChatService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly aiService: AiService,
-    private readonly knowledgeBaseService: KnowledgeBaseService
+    private readonly knowledgeBaseService: KnowledgeBaseService,
   ) {}
 
   async getConversations(userId: string) {
     return this.prisma.chatSession.findMany({
       where: { userId, isArchived: false },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -24,9 +24,9 @@ export class ChatService {
       where: { id, userId, isArchived: false },
       include: {
         messages: {
-          orderBy: { createdAt: 'asc' }
-        }
-      }
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     });
 
     if (!session) throw new NotFoundException('Conversation not found');
@@ -37,18 +37,20 @@ export class ChatService {
     return this.prisma.chatSession.create({
       data: {
         userId,
-        title: dto.title || 'New Conversation'
-      }
+        title: dto.title || 'New Conversation',
+      },
     });
   }
 
   async deleteConversation(userId: string, id: string) {
-    const session = await this.prisma.chatSession.findFirst({ where: { id, userId } });
+    const session = await this.prisma.chatSession.findFirst({
+      where: { id, userId },
+    });
     if (!session) throw new NotFoundException('Conversation not found');
-    
+
     return this.prisma.chatSession.update({
       where: { id },
-      data: { isArchived: true }
+      data: { isArchived: true },
     });
   }
 
@@ -61,15 +63,20 @@ export class ChatService {
       data: {
         sessionId,
         role: 'USER',
-        content: dto.content
-      }
+        content: dto.content,
+      },
     });
 
     // 3. Build Context using RAG (Knowledge Base)
-    const ragContext = await this.knowledgeBaseService.retrieveContext(dto.content);
-    
+    const ragContext = await this.knowledgeBaseService.retrieveContext(
+      dto.content,
+    );
+
     // 4. Build Conversation History Context
-    const history = session.messages.slice(-5).map((m: any) => `${m.role}: ${m.content}`).join('\n');
+    const history = session.messages
+      .slice(-5)
+      .map((m: any) => `${m.role}: ${m.content}`)
+      .join('\n');
 
     // 5. Call AiCoreEngine
     // Note: this uses the new AI Core Engine pattern
@@ -79,9 +86,9 @@ export class ChatService {
       variables: {
         context: ragContext,
         history: history,
-        user_input: dto.content
+        user_input: dto.content,
       },
-      requiredCredits: 1 // Deduct 1 credit per chat message
+      requiredCredits: 1, // Deduct 1 credit per chat message
     });
 
     // 6. Save AI Response
@@ -89,20 +96,23 @@ export class ChatService {
       data: {
         sessionId,
         role: 'ASSISTANT',
-        content: typeof aiResponse === 'string' ? aiResponse : JSON.stringify(aiResponse)
-      }
+        content:
+          typeof aiResponse === 'string'
+            ? aiResponse
+            : JSON.stringify(aiResponse),
+      },
     });
 
     return {
       userMessage,
-      assistantMessage
+      assistantMessage,
     };
   }
 
   async submitFeedback(userId: string, messageId: string, feedback: number) {
     const message = await this.prisma.chatMessage.findUnique({
       where: { id: messageId },
-      include: { session: true }
+      include: { session: true },
     });
 
     if (!message || message.session.userId !== userId) {
@@ -111,7 +121,7 @@ export class ChatService {
 
     return this.prisma.chatMessage.update({
       where: { id: messageId },
-      data: { feedback }
+      data: { feedback },
     });
   }
 }

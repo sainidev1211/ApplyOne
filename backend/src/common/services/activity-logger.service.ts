@@ -5,7 +5,13 @@ import { PrismaService } from '../../database/prisma.service.js';
 export class ActivityLoggerService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async log(userId: string, action: string, module: string, description?: string, req?: any) {
+  async log(
+    userId: string,
+    action: string,
+    module: string,
+    description?: string,
+    req?: any,
+  ) {
     try {
       const ipAddress = req?.ip || req?.socket?.remoteAddress;
       const userAgent = req?.headers?.['user-agent'];

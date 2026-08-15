@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from '@/layouts/MainLayout';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { DashboardLayout } from '@/layouts/DashboardLayout';
-import { ProtectedRoute } from './guards';
+import { ProtectedRoute, RoleGuard } from './guards';
 import { LoadingSpinner } from '@/components/ui/States';
 
 // Lazy load pages for chunk optimizations
@@ -13,10 +13,12 @@ const Signup = lazy(() => import('@/pages/Signup'));
 const VerifyEmail = lazy(() => import('@/pages/VerifyEmail'));
 const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
+const AuthCallback = lazy(() => import('@/pages/AuthCallback'));
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const Subscriptions = lazy(() => import('@/pages/Subscriptions'));
 const AtsChecker = lazy(() => import('@/pages/AtsChecker'));
 const Settings = lazy(() => import('@/pages/Settings'));
+const AdminPanel = lazy(() => import('@/pages/AdminPanel'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('@/pages/TermsOfService'));
 
@@ -44,6 +46,7 @@ export function AppRoutes() {
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
         </Route>
 
         {/* Dashboard Shell Wrapper locked behind Protected Guard */}
@@ -58,6 +61,19 @@ export function AppRoutes() {
           <Route path="/dashboard/subscriptions" element={<Subscriptions />} />
           <Route path="/dashboard/ats-checker" element={<AtsChecker />} />
           <Route path="/dashboard/settings" element={<Settings />} />
+        </Route>
+
+        {/* Admin Shell Wrapper locked behind Protected Guard + RoleGuard */}
+        <Route
+          element={
+            <ProtectedRoute>
+              <RoleGuard allowedRoles={['ADMIN']}>
+                <DashboardLayout />
+              </RoleGuard>
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/admin" element={<AdminPanel />} />
         </Route>
 
         {/* Wildcard redirect to Home */}

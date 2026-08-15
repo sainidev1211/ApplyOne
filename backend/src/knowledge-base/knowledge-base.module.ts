@@ -4,6 +4,6 @@ import { PrismaService } from '../database/prisma.service.js';
 
 @Module({
   providers: [KnowledgeBaseService, PrismaService],
-  exports: [KnowledgeBaseService]
+  exports: [KnowledgeBaseService],
 })
 export class KnowledgeBaseModule {}

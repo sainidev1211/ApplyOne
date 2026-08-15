@@ -25,15 +25,15 @@ export class AiHistoryService {
         prompt: params.prompt as Prisma.InputJsonValue,
         response: params.response as Prisma.InputJsonValue,
         status: params.status,
-        executionTimeMs: params.executionTimeMs
-      }
+        executionTimeMs: params.executionTimeMs,
+      },
     });
   }
 
   async getHistory(userId: string) {
     return this.prisma.aiHistory.findMany({
       where: { userId },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -41,7 +41,7 @@ export class AiHistoryService {
     return this.prisma.aiHistory.findMany({
       orderBy: { createdAt: 'desc' },
       include: { user: true },
-      take: 100 // limit to recent for admin view
+      take: 100, // limit to recent for admin view
     });
   }
 }

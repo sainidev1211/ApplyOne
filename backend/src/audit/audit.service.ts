@@ -15,10 +15,10 @@ export class AuditService {
     targetType?: string,
     oldValue?: any,
     newValue?: any,
-    ipAddress?: string
+    ipAddress?: string,
   ) {
     this.logger.log(`[Audit] ${adminId} performed ${action} on ${module}`);
-    
+
     return this.prisma.auditLog.create({
       data: {
         adminId,
@@ -28,8 +28,8 @@ export class AuditService {
         targetType,
         oldValue,
         newValue,
-        ipAddress
-      }
+        ipAddress,
+      },
     });
   }
 }

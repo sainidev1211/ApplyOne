@@ -56,7 +56,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         'message' in exceptionResponse
       ) {
         const msgField = (exceptionResponse as Record<string, unknown>).message;
-        message = Array.isArray(msgField) ? msgField.join(', ') : String(msgField);
+        message = Array.isArray(msgField)
+          ? msgField.join(', ')
+          : String(msgField);
       } else {
         message = exception.message;
       }

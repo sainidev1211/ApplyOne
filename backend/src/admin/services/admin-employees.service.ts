@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import { CreateEmployeeDto, UpdateEmployeeDto } from '../dto/admin.dto.js';
 import { ApplicationStatus, Prisma, UserRole } from '@prisma/client';
@@ -17,7 +21,9 @@ export class AdminEmployeesService {
       this.prisma.employee.findMany({
         skip,
         take: limit,
-        include: { user: { select: { fullName: true, email: true, role: true } } },
+        include: {
+          user: { select: { fullName: true, email: true, role: true } },
+        },
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.employee.count(),
@@ -43,8 +49,24 @@ export class AdminEmployeesService {
     if (!employee) throw new NotFoundException('Employee not found');
 
     const totalApplications = employee.applications.length;
-    const completed = employee.applications.filter(a => ([ApplicationStatus.APPLIED, ApplicationStatus.INTERVIEW, ApplicationStatus.OFFER, ApplicationStatus.REJECTED] as ApplicationStatus[]).includes(a.status)).length;
-    const pending = employee.applications.filter(a => ([ApplicationStatus.PENDING, ApplicationStatus.ASSIGNED] as ApplicationStatus[]).includes(a.status)).length;
+    const completed = employee.applications.filter((a) =>
+      (
+        [
+          ApplicationStatus.APPLIED,
+          ApplicationStatus.INTERVIEW,
+          ApplicationStatus.OFFER,
+          ApplicationStatus.REJECTED,
+        ] as ApplicationStatus[]
+      ).includes(a.status),
+    ).length;
+    const pending = employee.applications.filter((a) =>
+      (
+        [
+          ApplicationStatus.PENDING,
+          ApplicationStatus.ASSIGNED,
+        ] as ApplicationStatus[]
+      ).includes(a.status),
+    ).length;
 
     return {
       ...employee,
@@ -52,16 +74,21 @@ export class AdminEmployeesService {
         totalApplications,
         completed,
         pending,
-        completionRate: totalApplications > 0 ? (completed / totalApplications) * 100 : 0,
-      }
+        completionRate:
+          totalApplications > 0 ? (completed / totalApplications) * 100 : 0,
+      },
     };
   }
 
   async create(adminId: string, dto: CreateEmployeeDto) {
-    const existing = await this.prisma.employee.findUnique({ where: { employeeCode: dto.employeeCode } });
+    const existing = await this.prisma.employee.findUnique({
+      where: { employeeCode: dto.employeeCode },
+    });
     if (existing) throw new BadRequestException('Employee code already exists');
 
-    const user = await this.prisma.user.findUnique({ where: { id: dto.userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: dto.userId },
+    });
     if (!user) throw new NotFoundException('User not found');
 
     const employee = await this.prisma.employee.create({
@@ -98,7 +125,7 @@ export class AdminEmployeesService {
 
     const updated = await this.prisma.employee.update({
       where: { id },
-      data: dto as Prisma.EmployeeUpdateInput,
+      data: dto,
     });
 
     await this.prisma.auditLog.create({

@@ -42,7 +42,10 @@ export class GroqAiAdapter implements IAiService {
 
   constructor(private readonly configService: ConfigService) {
     this.apiKey = this.configService.get<string>('groq.apiKey', '');
-    this.defaultModel = this.configService.get<string>('groq.model', 'llama3-8b-8192');
+    this.defaultModel = this.configService.get<string>(
+      'groq.model',
+      'llama3-8b-8192',
+    );
   }
 
   async chat(request: AiChatRequest): Promise<AiChatResponse> {
@@ -55,7 +58,10 @@ export class GroqAiAdapter implements IAiService {
       max_tokens: request.maxTokens ?? 1024,
     };
 
-    const groqResponse = await this.callGroqApi<GroqChatResponse>('/chat/completions', body);
+    const groqResponse = await this.callGroqApi<GroqChatResponse>(
+      '/chat/completions',
+      body,
+    );
 
     return {
       content: groqResponse.choices[0]?.message?.content ?? '',
@@ -112,7 +118,7 @@ export class GroqAiAdapter implements IAiService {
     const options: RequestInit = {
       method,
       headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json',
       },
     };

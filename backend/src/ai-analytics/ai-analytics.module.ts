@@ -5,6 +5,6 @@ import { PrismaService } from '../database/prisma.service.js';
 
 @Module({
   controllers: [AiAnalyticsController],
-  providers: [AiAnalyticsService, PrismaService]
+  providers: [AiAnalyticsService, PrismaService],
 })
 export class AiAnalyticsModule {}

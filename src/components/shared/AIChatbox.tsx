@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { getStoredSession } from '@/services/authClient';
 
 interface Message {
   id: string;
@@ -75,36 +76,62 @@ export function AIChatbox() {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInputValue('');
     setIsTyping(true);
 
-    // Simulate AI response delay
-    await new Promise((resolve) => setTimeout(resolve, 1200));
+    try {
+      // Map messages to Groq format: { role: 'user' | 'assistant', content: '...' }
+      const profile = getStoredSession()?.user;
+      const profileContext = profile
+        ? `Current user context: name=${profile.fullName}; account type=${profile.accountType}; professional bio=${profile.bio || 'not provided'}; LinkedIn=${profile.linkedinUrl || 'not provided'}; GitHub=${profile.githubUrl || 'not provided'}. Use this only to personalize career-related answers; never reveal private account data unnecessarily.`
+        : '';
+      const groqMessages = [
+        ...(profileContext ? [{ role: 'system', content: profileContext }] : []),
+        ...newMessages.map((m) => ({
+        role: m.sender === 'user' ? 'user' : 'assistant',
+        content: m.text,
+        })),
+      ];
 
-    // Dynamic mock response lookup based on user keywords
-    let aiText = "That is a great question! I am in simulation mode right now, but once our AI core goes online, I will be able to analyze your resume and automate applications directly.";
-    const query = userText.toLowerCase();
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/v1/chat/public`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ messages: groqMessages }),
+      });
 
-    if (query.includes('resume') || query.includes('ats') || query.includes('score')) {
-      aiText = "To optimize your resume for ATS algorithms, ensure you use single-column layouts, clear standard headings, and integrate keywords from the job description directly. Our built-in scanner helps you hit a 90%+ pass rate.";
-    } else if (query.includes('apply') || query.includes('dispatch') || query.includes('job') || query.includes('work')) {
-      aiText = "Our automated dispatch queue matches and submits profile files dynamically based on your expected package and employment types (Full-time, Part-time, Internship) specified in the signup wizard.";
-    } else if (query.includes('pricing') || query.includes('plan') || query.includes('cost') || query.includes('money')) {
-      aiText = "We offer three premium packages tailored to your search velocity: Starter (₹999/mo), Professional (₹1299/mo), and Premium (₹1499/mo). All plans can be configured and unlocked directly from the dashboard pricing tab.";
-    } else if (query.includes('hello') || query.includes('hi') || query.includes('hey')) {
-      aiText = "Hello! How can I assist you with your ApplyOne career onboarding process today?";
+      if (!response.ok) {
+        throw new Error('Failed to get response');
+      }
+
+      const data = await response.json();
+      
+      // The backend uses a global ResponseInterceptor that wraps responses in { success: true, data: { ... } }
+      const actualContent = data.data?.content || data.content;
+
+      const aiMessage: Message = {
+        id: `ai-${Date.now()}`,
+        sender: 'ai',
+        text: actualContent || 'I encountered an issue processing your request.',
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMessage: Message = {
+        id: `ai-${Date.now()}`,
+        sender: 'ai',
+        text: 'Sorry, I am having trouble connecting to my AI core right now. Please try again later.',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
     }
-
-    const aiMessage: Message = {
-      id: `ai-${Date.now()}`,
-      sender: 'ai',
-      text: aiText,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, aiMessage]);
-    setIsTyping(false);
   };
 
   return (
@@ -115,7 +142,7 @@ export function AIChatbox() {
         onClick={() => setIsOpen(!isOpen)}
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.95 }}
-        className="h-14 w-14 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-white shadow-2xl cursor-pointer relative focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-bg-dark"
+        className="h-14 w-14 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-600 flex items-center justify-center text-white shadow-2xl cursor-pointer relative focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-bg-dark"
         aria-label="Toggle AI Assistant"
       >
         {isOpen ? (
@@ -144,7 +171,7 @@ export function AIChatbox() {
             <Card className="flex flex-col h-full w-full border border-border-light dark:border-border-dark bg-white dark:bg-card-dark shadow-2xl rounded-2xl overflow-hidden">
               
               {/* Chat Window Header with Robot Icon */}
-              <div className="p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-between">
+              <div className="p-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="h-7 w-7 rounded-lg bg-white/10 flex items-center justify-center text-white">
                     <RobotIcon className="h-4.5 w-4.5" />
@@ -153,7 +180,7 @@ export function AIChatbox() {
                     <h3 className="font-bold text-sm">ApplyOne AI Core</h3>
                     <span className="text-[10px] text-blue-100 flex items-center gap-1.5">
                       <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-                      Online (Simulation)
+                      Online
                     </span>
                   </div>
                 </div>

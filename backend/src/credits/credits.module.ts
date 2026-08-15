@@ -5,6 +5,6 @@ import { CreditsService } from './credits.service.js';
 
 @Module({
   controllers: [CreditsController],
-  providers: [PrismaService, CreditsService]
+  providers: [PrismaService, CreditsService],
 })
 export class CreditsModule {}

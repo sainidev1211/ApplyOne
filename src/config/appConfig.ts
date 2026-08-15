@@ -35,6 +35,7 @@ export const ROUTES = {
   SUBSCRIPTIONS: '/dashboard/subscriptions',
   ATS_CHECKER: '/dashboard/ats-checker',
   SETTINGS: '/dashboard/settings',
+  ADMIN: '/admin',
   PRIVACY: '/privacy',
   TERMS: '/terms',
 };
@@ -65,7 +66,7 @@ export const NAVIGATION_LINKS = {
     ],
     contact: [
       { label: 'Contact Support', href: 'mailto:support@applyone.co' },
-      { label: 'FAQs', href: '#resources' },
+      { label: 'FAQs', href: '#faqs' },
     ],
   },
 };
@@ -79,7 +80,7 @@ export interface PricingPlan {
   features: string[];
   ctaText: string;
   isPopular: boolean;
-  colorScheme: 'blue' | 'purple' | 'indigo';
+  colorScheme: 'blue' | 'cyan' | 'indigo';
 }
 
 export const PRICING_PLANS: PricingPlan[] = [
@@ -112,7 +113,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     ],
     ctaText: 'Unlock Premium',
     isPopular: false,
-    colorScheme: 'purple',
+    colorScheme: 'cyan',
   },
   {
     id: 'elite',
@@ -160,9 +161,9 @@ export const RESOURCES = [
   {
     id: 'faqs',
     title: 'Frequently Asked Questions',
-    description: 'Have queries about automated matching? Get them resolved instantly here.',
+    description: 'Find answers to common questions about our platform.',
     category: 'FAQ',
-    link: '/pdfs/faq.pdf',
+    link: '#faqs',
     readTime: '3 min read',
   },
 ];

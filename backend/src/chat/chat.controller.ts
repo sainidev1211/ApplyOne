@@ -1,7 +1,20 @@
-import { Controller, Get, Post, Delete, Param, Body, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ChatService } from './chat.service.js';
-import { CreateChatSessionDto, SendMessageDto, MessageFeedbackDto } from './dto/chat.dto.js';
+import {
+  CreateChatSessionDto,
+  SendMessageDto,
+  MessageFeedbackDto,
+} from './dto/chat.dto.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 
 @ApiTags('Chat')
@@ -44,6 +57,10 @@ export class ChatController {
   @Post('feedback')
   @ApiOperation({ summary: 'Submit feedback for a specific message (1 or -1)' })
   submitFeedback(@Request() req: any, @Body() dto: MessageFeedbackDto) {
-    return this.chatService.submitFeedback(req.user.id, dto.messageId, dto.feedback);
+    return this.chatService.submitFeedback(
+      req.user.id,
+      dto.messageId,
+      dto.feedback,
+    );
   }
 }

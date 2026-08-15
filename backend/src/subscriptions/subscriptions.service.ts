@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service.js';
 import { SubscribeDto, CancelSubscriptionDto } from './dto/subscription.dto.js';
 import { SubscriptionStatus } from '@prisma/client';
@@ -26,21 +30,32 @@ export class SubscriptionsService {
   }
 
   async subscribe(userId: string, dto: SubscribeDto) {
-    const plan = await this.prisma.subscriptionPlan.findUnique({ where: { id: dto.planId } });
+    const plan = await this.prisma.subscriptionPlan.findUnique({
+      where: { id: dto.planId },
+    });
     if (!plan) throw new NotFoundException('Plan not found');
 
     const existingActive = await this.prisma.subscription.findFirst({
-      where: { userId, status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL] } },
+      where: {
+        userId,
+        status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL] },
+      },
     });
 
     if (existingActive) {
       if (existingActive.planId === plan.id) {
-        throw new BadRequestException('You are already subscribed to this plan');
+        throw new BadRequestException(
+          'You are already subscribed to this plan',
+        );
       }
       // Cancel old subscription
       await this.prisma.subscription.update({
         where: { id: existingActive.id },
-        data: { status: SubscriptionStatus.CANCELLED, cancelledAt: new Date(), cancellationReason: 'Upgraded/Downgraded' },
+        data: {
+          status: SubscriptionStatus.CANCELLED,
+          cancelledAt: new Date(),
+          cancellationReason: 'Upgraded/Downgraded',
+        },
       });
     }
 
@@ -65,7 +80,10 @@ export class SubscriptionsService {
 
   async cancel(userId: string, dto: CancelSubscriptionDto) {
     const sub = await this.prisma.subscription.findFirst({
-      where: { userId, status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL] } },
+      where: {
+        userId,
+        status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL] },
+      },
     });
 
     if (!sub) throw new BadRequestException('No active subscription to cancel');

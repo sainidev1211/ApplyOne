@@ -8,14 +8,18 @@ export class JobImportService {
   constructor(private readonly prisma: PrismaService) {}
 
   async importJobs(sourceId: string) {
-    const source = await this.prisma.jobImportSource.findUnique({ where: { id: sourceId } });
+    const source = await this.prisma.jobImportSource.findUnique({
+      where: { id: sourceId },
+    });
     if (!source) throw new Error('Source not found');
 
-    this.logger.log(`Starting job import from ${source.provider} for company ${source.companyId}`);
+    this.logger.log(
+      `Starting job import from ${source.provider} for company ${source.companyId}`,
+    );
 
     // Mock Import Logic based on provider
     let jobsAdded = 0;
-    let jobsUpdated = 0;
+    const jobsUpdated = 0;
     let status = 'SUCCESS';
     let errorMessage = null;
 
@@ -33,7 +37,9 @@ export class JobImportService {
     } catch (e: any) {
       status = 'FAILED';
       errorMessage = e.message;
-      this.logger.error(`Import failed for ${source.provider}: ${errorMessage}`);
+      this.logger.error(
+        `Import failed for ${source.provider}: ${errorMessage}`,
+      );
     }
 
     await this.prisma.jobImportLog.create({
@@ -42,13 +48,13 @@ export class JobImportService {
         status,
         jobsAdded,
         jobsUpdated,
-        errorMessage
-      }
+        errorMessage,
+      },
     });
 
     await this.prisma.jobImportSource.update({
       where: { id: sourceId },
-      data: { lastRunAt: new Date() }
+      data: { lastRunAt: new Date() },
     });
 
     return { status, jobsAdded, jobsUpdated };

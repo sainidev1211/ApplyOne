@@ -5,6 +5,6 @@ import { PrismaService } from '../database/prisma.service.js';
 @Global()
 @Module({
   providers: [AuditService, PrismaService],
-  exports: [AuditService]
+  exports: [AuditService],
 })
 export class AuditModule {}

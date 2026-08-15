@@ -7,7 +7,7 @@ export function Quote() {
     <section className="py-20 bg-bg-alt-light dark:bg-bg-alt-dark transition-colors duration-300 relative overflow-hidden">
       
       {/* Background decoration */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-purple-500/5 dark:bg-purple-600/5 blur-3xl" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-cyan-500/5 dark:bg-cyan-600/5 blur-3xl" />
       
       <Container className="max-w-4xl text-center relative z-10">
         <motion.div
@@ -18,7 +18,7 @@ export function Quote() {
           className="space-y-6"
         >
           {/* Elegant quote marks */}
-          <span className="block font-serif text-8xl text-purple-300/40 dark:text-purple-700/30 leading-none select-none">
+          <span className="block font-serif text-8xl text-cyan-300/40 dark:text-cyan-700/30 leading-none select-none">
             “
           </span>
 

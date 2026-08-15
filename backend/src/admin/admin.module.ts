@@ -12,7 +12,20 @@ import { AdminAuditController } from './controllers/admin-audit.controller.js';
 import { AdminAuditService } from './services/admin-audit.service.js';
 
 @Module({
-  controllers: [AdminDashboardController, AdminUsersController, AdminEmployeesController, AdminSettingsController, AdminAuditController],
-  providers: [PrismaService, AdminDashboardService, AdminUsersService, AdminEmployeesService, AdminSettingsService, AdminAuditService]
+  controllers: [
+    AdminDashboardController,
+    AdminUsersController,
+    AdminEmployeesController,
+    AdminSettingsController,
+    AdminAuditController,
+  ],
+  providers: [
+    PrismaService,
+    AdminDashboardService,
+    AdminUsersService,
+    AdminEmployeesService,
+    AdminSettingsService,
+    AdminAuditService,
+  ],
 })
 export class AdminModule {}

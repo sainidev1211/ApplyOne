@@ -11,7 +11,7 @@ export function Badge({ children, variant = 'primary', className, ...props }: Ba
 
   const variants = {
     primary: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-    secondary: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+    secondary: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
     accent: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
     success: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
     warning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',

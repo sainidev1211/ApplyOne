@@ -10,14 +10,20 @@ export class WebhooksController {
   @Post('stripe')
   @HttpCode(200)
   @ApiOperation({ summary: 'Stripe Webhook Endpoint' })
-  handleStripeWebhook(@Body() body: any, @Headers('stripe-signature') signature: string) {
+  handleStripeWebhook(
+    @Body() body: any,
+    @Headers('stripe-signature') signature: string,
+  ) {
     return this.webhooksService.handleStripeWebhook(body, signature);
   }
 
   @Post('razorpay')
   @HttpCode(200)
   @ApiOperation({ summary: 'Razorpay Webhook Endpoint' })
-  handleRazorpayWebhook(@Body() body: any, @Headers('x-razorpay-signature') signature: string) {
+  handleRazorpayWebhook(
+    @Body() body: any,
+    @Headers('x-razorpay-signature') signature: string,
+  ) {
     return this.webhooksService.handleRazorpayWebhook(body, signature);
   }
 }

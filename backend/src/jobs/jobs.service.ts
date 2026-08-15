@@ -1,6 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service.js';
-import { CreateJobDto, UpdateJobDto, JobSearchQueryDto } from './dto/job.dto.js';
+import {
+  CreateJobDto,
+  UpdateJobDto,
+  JobSearchQueryDto,
+} from './dto/job.dto.js';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -21,8 +25,12 @@ export class JobsService {
     const where: Prisma.JobWhereInput = {
       status: 'ACTIVE',
       ...(query.company && { companyId: query.company }),
-      ...(query.role && { title: { contains: query.role, mode: 'insensitive' } }),
-      ...(query.location && { location: { contains: query.location, mode: 'insensitive' } }),
+      ...(query.role && {
+        title: { contains: query.role, mode: 'insensitive' },
+      }),
+      ...(query.location && {
+        location: { contains: query.location, mode: 'insensitive' },
+      }),
       ...(query.remoteMode && { remoteMode: query.remoteMode }),
     };
 
@@ -70,7 +78,7 @@ export class JobsService {
 
     return this.prisma.job.update({
       where: { id },
-      data: data as Prisma.JobUpdateInput,
+      data: data,
     });
   }
 

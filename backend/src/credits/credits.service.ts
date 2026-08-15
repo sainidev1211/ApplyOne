@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service.js';
 import { AddCreditsDto, DeductCreditsDto } from './dto/credit.dto.js';
 import { SubscriptionStatus } from '@prisma/client';
@@ -9,10 +13,13 @@ export class CreditsService {
 
   async getCredits(userId: string) {
     const sub = await this.prisma.subscription.findFirst({
-      where: { userId, status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL] } },
+      where: {
+        userId,
+        status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL] },
+      },
       orderBy: { createdAt: 'desc' },
     });
-    
+
     if (!sub) {
       return {
         remainingJobCredits: 0,
@@ -38,9 +45,12 @@ export class CreditsService {
   }
 
   async deductCredits(dto: DeductCreditsDto) {
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx: any) => {
       const sub = await tx.subscription.findFirst({
-        where: { userId: dto.userId, status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL] } },
+        where: {
+          userId: dto.userId,
+          status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL] },
+        },
         orderBy: { createdAt: 'desc' },
       });
 
@@ -83,9 +93,12 @@ export class CreditsService {
   }
 
   async addCredits(dto: AddCreditsDto) {
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx: any) => {
       const sub = await tx.subscription.findFirst({
-        where: { userId: dto.userId, status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL] } },
+        where: {
+          userId: dto.userId,
+          status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL] },
+        },
         orderBy: { createdAt: 'desc' },
       });
 

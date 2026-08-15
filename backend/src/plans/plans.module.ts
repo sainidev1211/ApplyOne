@@ -5,6 +5,6 @@ import { PlansService } from './plans.service.js';
 
 @Module({
   controllers: [PlansController],
-  providers: [PrismaService, PlansService]
+  providers: [PrismaService, PlansService],
 })
 export class PlansModule {}

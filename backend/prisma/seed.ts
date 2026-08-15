@@ -13,6 +13,10 @@ import { PrismaClient, UserRole, AccountType, ApplicationStatus,
 const prisma = new PrismaClient();
 
 async function main(): Promise<void> {
+  if (process.env.NODE_ENV !== 'development') {
+    console.log('⚠️  Seed script is for development only. Exiting.');
+    process.exit(0);
+  }
   console.log('🌱 Starting ApplyOne seed...');
 
   // ==========================================================================

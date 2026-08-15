@@ -15,30 +15,30 @@ export const passwordSchema = z
  */
 export const signupSchema = z
   .object({
-    // Step 1: Identity & Credentials
-    email: z.string().email('Please enter a valid email address'),
+    fullName: z.string().trim().min(2, 'Full name is required'),
+    email: z.string().trim().email('Please enter a valid email address'),
+    phone: z.string().trim().min(7, 'Please enter a valid phone number'),
+    accountType: z.enum(['STUDENT', 'FRESHER', 'PROFESSIONAL']),
     password: passwordSchema,
-
-    // Step 2: Documents & Work Experience
+    confirmPassword: z.string().min(1, 'Please confirm your password'),
     hasExperience: z.boolean(),
     companyName: z.string().optional(),
     roleDetails: z.string().optional(),
 
     // Step 3: Employment Preferences & Packages
-    employmentTypes: z
-      .array(z.enum(['Full-time', 'Part-time', 'Internship']))
-      .min(1, 'Select at least one type of employment preferred'),
+    employmentTypesText: z.string().trim().min(1, 'Enter at least one preferred employment type'),
     lastMonthlyPackage: z.string().optional(),
     expectedPackageFullTime: z.string().optional(),
     expectedPackagePartTime: z.string().optional(),
     expectedPackageInternship: z.string().optional(),
 
     // Step 4: Disclaimers
-    acceptDisclaimer: z.literal(true, {
-      message: 'You must accept the disclaimer to register',
-    }),
+    acceptDisclaimer: z.boolean().refine(Boolean, 'You must accept the disclaimer to register'),
   })
   .superRefine((data, ctx) => {
+    if (data.password !== data.confirmPassword) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Passwords do not match', path: ['confirmPassword'] });
+    }
     // If experience is checked, validate company details and last package
     if (data.hasExperience) {
       if (!data.companyName || data.companyName.trim() === '') {
@@ -64,36 +64,6 @@ export const signupSchema = z
       }
     }
 
-    // Dynamic Expected Package Validation based on selected employmentTypes
-    if (data.employmentTypes.includes('Full-time')) {
-      if (!data.expectedPackageFullTime || data.expectedPackageFullTime.trim() === '') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Expected package for Full-time is mandatory',
-          path: ['expectedPackageFullTime'],
-        });
-      }
-    }
-
-    if (data.employmentTypes.includes('Part-time')) {
-      if (!data.expectedPackagePartTime || data.expectedPackagePartTime.trim() === '') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Expected package for Part-time is mandatory',
-          path: ['expectedPackagePartTime'],
-        });
-      }
-    }
-
-    if (data.employmentTypes.includes('Internship')) {
-      if (!data.expectedPackageInternship || data.expectedPackageInternship.trim() === '') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Expected package for Internship is mandatory',
-          path: ['expectedPackageInternship'],
-        });
-      }
-    }
   });
 
 /**

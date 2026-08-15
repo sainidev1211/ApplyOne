@@ -51,7 +51,11 @@ export enum SubscriptionStatus {
 
 export interface IPaymentService {
   createCustomer(email: string, name: string): Promise<PaymentCustomer>;
-  createPaymentIntent(amount: number, currency: string, customerId: string): Promise<PaymentIntent>;
+  createPaymentIntent(
+    amount: number,
+    currency: string,
+    customerId: string,
+  ): Promise<PaymentIntent>;
   confirmPayment(paymentIntentId: string): Promise<PaymentIntent>;
   createSubscription(customerId: string, planId: string): Promise<Subscription>;
   cancelSubscription(subscriptionId: string): Promise<Subscription>;

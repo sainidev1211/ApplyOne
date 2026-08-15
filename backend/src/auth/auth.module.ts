@@ -1,25 +1,31 @@
-// ============================================================
-// DEV_ONLY — TEMPORARY DEVELOPMENT AUTHENTICATION MODULE
-// Replace this entire module with a proper auth implementation
-// before going to production.
-// ============================================================
-
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
+import { MongooseModule } from '@nestjs/mongoose';
+import { AuthController } from './auth.controller.js';
+import { AuthService } from './auth.service.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
-import { PrismaService } from '../database/prisma.service.js';
+import { User, UserSchema } from '../users/schemas/user.schema.js';
+import { UploadsModule } from '../uploads/uploads.module.js';
 
 @Module({
   imports: [
+    ConfigModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.register({}),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get<string>('JWT_SECRET', 'applyone-secret'),
+        signOptions: { expiresIn: '7d' },
+      }),
+      inject: [ConfigService],
+    }),
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    UploadsModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, PrismaService],
+  providers: [AuthService, JwtStrategy],
   exports: [AuthService, JwtModule, PassportModule],
 })
 export class AuthModule {}

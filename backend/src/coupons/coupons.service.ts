@@ -1,6 +1,14 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service.js';
-import { CreateCouponDto, UpdateCouponDto, ValidateCouponDto } from './dto/coupon.dto.js';
+import {
+  CreateCouponDto,
+  UpdateCouponDto,
+  ValidateCouponDto,
+} from './dto/coupon.dto.js';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -20,14 +28,16 @@ export class CouponsService {
   }
 
   async createCoupon(dto: CreateCouponDto) {
-    const existing = await this.prisma.coupon.findUnique({ where: { code: dto.code } });
+    const existing = await this.prisma.coupon.findUnique({
+      where: { code: dto.code },
+    });
     if (existing) throw new BadRequestException('Coupon code already exists');
 
     return this.prisma.coupon.create({
       data: {
         ...dto,
         expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
-      } as Prisma.CouponCreateInput,
+      },
     });
   }
 
@@ -38,7 +48,7 @@ export class CouponsService {
       data: {
         ...dto,
         expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
-      } as Prisma.CouponUpdateInput,
+      },
     });
   }
 
@@ -48,11 +58,14 @@ export class CouponsService {
   }
 
   async validateCoupon(userId: string, dto: ValidateCouponDto) {
-    const coupon = await this.prisma.coupon.findUnique({ where: { code: dto.code } });
-    
+    const coupon = await this.prisma.coupon.findUnique({
+      where: { code: dto.code },
+    });
+
     if (!coupon) throw new NotFoundException('Invalid coupon code');
-    if (!coupon.isActive) throw new BadRequestException('Coupon is no longer active');
-    
+    if (!coupon.isActive)
+      throw new BadRequestException('Coupon is no longer active');
+
     if (coupon.expiresAt && new Date() > coupon.expiresAt) {
       throw new BadRequestException('Coupon has expired');
     }
@@ -62,19 +75,27 @@ export class CouponsService {
     }
 
     if (coupon.minimumAmount && dto.amount < Number(coupon.minimumAmount)) {
-      throw new BadRequestException(`Minimum amount of ${coupon.minimumAmount} required`);
+      throw new BadRequestException(
+        `Minimum amount of ${coupon.minimumAmount} required`,
+      );
     }
 
-    if (coupon.applicablePlans && coupon.applicablePlans.length > 0 && !coupon.applicablePlans.includes(dto.planId)) {
+    if (
+      coupon.applicablePlans &&
+      coupon.applicablePlans.length > 0 &&
+      !coupon.applicablePlans.includes(dto.planId)
+    ) {
       throw new BadRequestException('Coupon is not applicable for this plan');
     }
 
     const userUsage = await this.prisma.payment.count({
-      where: { couponId: coupon.id, subscription: { userId } }
+      where: { couponId: coupon.id, subscription: { userId } },
     });
 
     if (userUsage >= coupon.perUserLimit) {
-      throw new BadRequestException('You have reached the maximum usage limit for this coupon');
+      throw new BadRequestException(
+        'You have reached the maximum usage limit for this coupon',
+      );
     }
 
     // Calculate discount
@@ -87,12 +108,12 @@ export class CouponsService {
 
     // Don't allow discount greater than amount
     discountAmount = Math.min(discountAmount, dto.amount);
-    
+
     return {
       valid: true,
       couponId: coupon.id,
       discountAmount,
-      finalAmount: dto.amount - discountAmount
+      finalAmount: dto.amount - discountAmount,
     };
   }
 }

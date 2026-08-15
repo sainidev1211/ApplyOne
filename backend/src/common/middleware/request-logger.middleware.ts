@@ -8,7 +8,8 @@ export class RequestLoggerMiddleware implements NestMiddleware {
   use(request: Request, _response: Response, next: NextFunction): void {
     const { method, originalUrl, ip, body } = request;
     const userAgent = request.get('user-agent') ?? '';
-    const correlationId = request.get('x-correlation-id') ?? crypto.randomUUID();
+    const correlationId =
+      request.get('x-correlation-id') ?? crypto.randomUUID();
 
     request.headers['x-correlation-id'] = correlationId;
 
@@ -29,7 +30,13 @@ export class RequestLoggerMiddleware implements NestMiddleware {
   }
 
   private sanitizeBody(body: Record<string, unknown>): Record<string, unknown> {
-    const sensitiveKeys = ['password', 'confirmPassword', 'token', 'secret', 'apiKey'];
+    const sensitiveKeys = [
+      'password',
+      'confirmPassword',
+      'token',
+      'secret',
+      'apiKey',
+    ];
     const sanitized = { ...body };
 
     for (const key of sensitiveKeys) {

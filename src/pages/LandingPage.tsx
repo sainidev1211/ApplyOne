@@ -8,6 +8,7 @@ import { WhyChooseUs } from '@/features/marketing/components/WhyChooseUs';
 import { Resources } from '@/features/marketing/components/Resources';
 import { AboutUs } from '@/features/marketing/components/AboutUs';
 import { Reviews } from '@/features/marketing/components/Reviews';
+import { FAQ } from '@/features/marketing/components/FAQ';
 import { SEO } from '@/components/shared/SEO';
 
 export default function LandingPage() {
@@ -25,6 +26,7 @@ export default function LandingPage() {
         <WhyChooseUs />
         <Pricing />
         <Resources />
+        <FAQ />
         <Reviews />
         <AboutUs />
       </div>

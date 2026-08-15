@@ -18,13 +18,13 @@ export default function TermsOfService() {
       <div className="py-20 bg-bg-light dark:bg-bg-dark min-h-screen transition-colors duration-300 relative overflow-hidden text-left">
         {/* Background blobs */}
         <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-blue-500/5 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-purple-500/5 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-cyan-500/5 blur-3xl pointer-events-none" />
 
         <Container className="max-w-4xl relative z-10">
           <div className="space-y-4 mb-10">
             <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-text-primary-light dark:text-text-primary-dark">
               Terms of{' '}
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
                 Service
               </span>
             </h1>

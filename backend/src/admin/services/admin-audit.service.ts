@@ -7,7 +7,9 @@ import { Prisma } from '@prisma/client';
 export class AdminAuditService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getLogs(query: PaginationQueryDto & { module?: string; action?: string }) {
+  async getLogs(
+    query: PaginationQueryDto & { module?: string; action?: string },
+  ) {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 20;
     const skip = (page - 1) * limit;

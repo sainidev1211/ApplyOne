@@ -12,7 +12,7 @@ export function Hero() {
       {/* Premium animated gradient canvas */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-grid-bg opacity-30 dark:opacity-40" />
-        <div className="absolute bottom-1/4 left-1/3 w-[400px] h-[400px] rounded-full bg-purple-400/20 dark:bg-purple-600/10 blur-[120px] animate-pulse-slow" />
+        <div className="absolute bottom-1/4 left-1/3 w-[400px] h-[400px] rounded-full bg-cyan-400/20 dark:bg-cyan-600/10 blur-[120px] animate-pulse-slow" />
       </div>
 
       {/* Floating abstract decorative elements */}
@@ -51,7 +51,7 @@ export function Hero() {
             className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight"
           >
             Apply Once.{' '}
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
               Reach Everywhere.
             </span>
           </motion.h1>

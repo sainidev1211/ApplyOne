@@ -26,7 +26,7 @@ export function Logo({
       <defs>
         <linearGradient id="applyone-logo-grad" x1="0%" y1="100%" x2="100%" y2="0%">
           <stop offset="0%" stopColor="#2563eb" /> {/* Royal Blue */}
-          <stop offset="100%" stopColor="#7c3aed" /> {/* Violet/Purple */}
+          <stop offset="100%" stopColor="#06b6d4" /> {/* Violet/Purple */}
         </linearGradient>
       </defs>
       
@@ -62,7 +62,7 @@ export function Logo({
         <div className="flex flex-col text-left">
           <div className={`${textClass} font-sans font-extrabold tracking-tight leading-none`}>
             <span className="text-slate-900 dark:text-white transition-colors duration-300">Apply</span>
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">One</span>
+            <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">One</span>
           </div>
           {showTagline && (
             <span className="text-[7.5px] font-sans font-bold tracking-[0.16em] text-slate-400 dark:text-slate-500 uppercase mt-1 leading-none">

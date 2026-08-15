@@ -1,6 +1,6 @@
 // =============================================================================
 // ApplyOne — Complete Prisma Schema
-// Database: Supabase PostgreSQL
+// Legacy relational schema. Authentication and user onboarding use MongoDB.
 // ORM: Prisma 7.x
 // =============================================================================
 //
@@ -32,6 +32,7 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
 
 // =============================================================================
 // ENUMS
@@ -188,8 +189,11 @@ model User {
   workAuthorization  String?
 
   isActive    Boolean   @default(true)
-  isVerified  Boolean   @default(false)
+  isVerified  Boolean   @default(false) // Requires email verification via EmailVerification token
   lastLoginAt DateTime?
+
+  // bcrypt password hash for custom JWT auth
+  passwordHash String?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -210,12 +214,37 @@ model User {
   aiHistories    AiHistory[]
   tokenUsageLogs TokenUsageLog[]
   searchQueryLogs SearchQueryLog[]
+  emailVerifications EmailVerification[]
 
   @@index([email])
   @@index([role])
   @@index([accountType])
   @@index([isActive])
   @@map("users")
+}
+
+// =============================================================================
+// MODEL: EmailVerification
+// Stores tokens for email verification and password reset
+// =============================================================================
+
+model EmailVerification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+
+  token     String   @unique
+  type      String   // 'EMAIL_VERIFY' | 'PASSWORD_RESET'
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@index([type])
+  @@map("email_verifications")
 }
 
 // =============================================================================

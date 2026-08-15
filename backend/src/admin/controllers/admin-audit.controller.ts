@@ -17,7 +17,9 @@ export class AdminAuditController {
 
   @Get()
   @ApiOperation({ summary: 'List audit logs with filtering' })
-  getLogs(@Query() query: PaginationQueryDto & { module?: string; action?: string }) {
+  getLogs(
+    @Query() query: PaginationQueryDto & { module?: string; action?: string },
+  ) {
     return this.adminAuditService.getLogs(query);
   }
 }

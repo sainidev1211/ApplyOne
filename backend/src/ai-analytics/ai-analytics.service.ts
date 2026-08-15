@@ -12,37 +12,37 @@ export class AiAnalyticsService {
       _sum: {
         promptTokens: true,
         completionTokens: true,
-        totalTokens: true
-      }
+        totalTokens: true,
+      },
     });
 
     // 2. Breakdowns by Feature
     const featureBreakdownRaw = await this.prisma.aiHistory.groupBy({
       by: ['feature'],
-      _count: { feature: true }
+      _count: { feature: true },
     });
     const featureBreakdown = featureBreakdownRaw.map((f: any) => ({
       feature: f.feature,
-      uses: f._count.feature
+      uses: f._count.feature,
     }));
 
     // 3. ATS Engine Stats
     const atsTotalAnalyzed = await this.prisma.resumeAnalysis.count();
     const atsAvgScore = await this.prisma.resumeAnalysis.aggregate({
-      _avg: { atsScore: true }
+      _avg: { atsScore: true },
     });
 
     return {
       overview: {
         totalAiInvocations: totalAiUses,
         totalTokens: totalTokensUsed._sum.totalTokens || 0,
-        estimatedCostUsd: (totalTokensUsed._sum.totalTokens || 0) * 0.000002 // assuming roughly $2 per 1M tokens
+        estimatedCostUsd: (totalTokensUsed._sum.totalTokens || 0) * 0.000002, // assuming roughly $2 per 1M tokens
       },
       featureBreakdown,
       atsEngine: {
         totalResumesScored: atsTotalAnalyzed,
-        averageScore: atsAvgScore._avg.atsScore || 0
-      }
+        averageScore: atsAvgScore._avg.atsScore || 0,
+      },
     };
   }
 }

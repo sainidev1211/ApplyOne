@@ -5,6 +5,6 @@ import { JobsService } from './jobs.service';
 
 @Module({
   controllers: [JobsController],
-  providers: [PrismaService, JobsService]
+  providers: [PrismaService, JobsService],
 })
 export class JobsModule {}

@@ -8,6 +8,11 @@ import { CreditsService } from '../credits/credits.service.js';
 
 @Module({
   controllers: [WebhooksController],
-  providers: [PrismaService, WebhooksService, SubscriptionsService, CreditsService]
+  providers: [
+    PrismaService,
+    WebhooksService,
+    SubscriptionsService,
+    CreditsService,
+  ],
 })
 export class WebhooksModule {}

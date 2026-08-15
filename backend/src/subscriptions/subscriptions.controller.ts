@@ -1,4 +1,11 @@
-import { Controller, Get, Post, Body, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SubscriptionsService } from './subscriptions.service.js';
 import { SubscribeDto, CancelSubscriptionDto } from './dto/subscription.dto.js';
@@ -24,7 +31,9 @@ export class SubscriptionsController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Subscribe to a plan (also used for upgrade/downgrade)' })
+  @ApiOperation({
+    summary: 'Subscribe to a plan (also used for upgrade/downgrade)',
+  })
   subscribe(@Request() req: any, @Body() dto: SubscribeDto) {
     return this.subscriptionsService.subscribe(req.user.id, dto);
   }

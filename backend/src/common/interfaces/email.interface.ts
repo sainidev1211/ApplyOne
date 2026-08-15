@@ -25,8 +25,21 @@ export interface EmailSendResult {
 export interface IEmailService {
   sendEmail(payload: EmailPayload): Promise<EmailSendResult>;
   sendWelcomeEmail(to: string, name: string): Promise<EmailSendResult>;
-  sendPasswordResetEmail(to: string, resetLink: string): Promise<EmailSendResult>;
-  sendVerificationEmail(to: string, verificationLink: string): Promise<EmailSendResult>;
-  sendSubscriptionConfirmationEmail(to: string, planName: string): Promise<EmailSendResult>;
-  sendApplicationStatusEmail(to: string, jobTitle: string, status: string): Promise<EmailSendResult>;
+  sendPasswordResetEmail(
+    to: string,
+    resetLink: string,
+  ): Promise<EmailSendResult>;
+  sendVerificationEmail(
+    to: string,
+    verificationLink: string,
+  ): Promise<EmailSendResult>;
+  sendSubscriptionConfirmationEmail(
+    to: string,
+    planName: string,
+  ): Promise<EmailSendResult>;
+  sendApplicationStatusEmail(
+    to: string,
+    jobTitle: string,
+    status: string,
+  ): Promise<EmailSendResult>;
 }

@@ -32,7 +32,7 @@ export function AuthLayout() {
             repeat: Infinity,
             ease: 'easeInOut' as const,
           }}
-          className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full bg-purple-500/10 dark:bg-purple-600/10 blur-3xl"
+          className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full bg-cyan-500/10 dark:bg-cyan-600/10 blur-3xl"
         />
       </div>
 
@@ -57,7 +57,7 @@ export function AuthLayout() {
 
         {/* Footer text */}
         <p className="text-center text-xs text-text-secondary-light dark:text-text-secondary-dark">
-          Secured by Supabase Auth with RLS database encryption.
+          Secured by MongoDB-backed email and password authentication.
         </p>
       </div>
     </div>

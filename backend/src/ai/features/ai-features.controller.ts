@@ -1,4 +1,11 @@
-import { Controller, Post, Body, UseGuards, Request, Get } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Request,
+  Get,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AiService } from '../core/ai.service.js';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard.js';
@@ -16,102 +23,144 @@ export class AiFeaturesController {
   constructor(
     private readonly aiService: AiService,
     private readonly historyService: AiHistoryService,
-    private readonly tokenUsage: TokenUsageService
+    private readonly tokenUsage: TokenUsageService,
   ) {}
 
   @Post('resume/review')
   @ApiOperation({ summary: 'AI Resume Review' })
-  async resumeReview(@Request() req: any, @Body() body: { resumeText: string }) {
+  async resumeReview(
+    @Request() req: any,
+    @Body() body: { resumeText: string },
+  ) {
     return this.aiService.executeFeature({
       userId: req.user.id,
       featureName: 'RESUME_REVIEW',
       variables: { resume_text: body.resumeText },
-      requiredCredits: 1
+      requiredCredits: 1,
+    });
+  }
+
+  @Post('bio/generate')
+  @ApiOperation({ summary: 'Generate Bio from Resume' })
+  async generateBio(
+    @Request() req: any,
+    @Body() body: { resumeText: string },
+  ) {
+    return this.aiService.executeFeature({
+      userId: req.user.id,
+      featureName: 'BIO_GENERATION',
+      variables: { resume_text: body.resumeText },
+      requiredCredits: 1,
     });
   }
 
   @Post('resume/rewrite')
   @ApiOperation({ summary: 'AI Resume Rewrite' })
-  async resumeRewrite(@Request() req: any, @Body() body: { resumeText: string, tone: string }) {
+  async resumeRewrite(
+    @Request() req: any,
+    @Body() body: { resumeText: string; tone: string },
+  ) {
     return this.aiService.executeFeature({
       userId: req.user.id,
       featureName: 'RESUME_REWRITE',
       variables: { resume_text: body.resumeText, tone: body.tone },
-      requiredCredits: 2
+      requiredCredits: 2,
     });
   }
 
   @Post('cover-letter')
   @ApiOperation({ summary: 'Generate Cover Letter' })
-  async coverLetter(@Request() req: any, @Body() body: { resumeText: string, jobDescription: string, companyName: string, jobTitle: string, tone: string }) {
+  async coverLetter(
+    @Request() req: any,
+    @Body()
+    body: {
+      resumeText: string;
+      jobDescription: string;
+      companyName: string;
+      jobTitle: string;
+      tone: string;
+    },
+  ) {
     return this.aiService.executeFeature({
       userId: req.user.id,
       featureName: 'COVER_LETTER',
-      variables: { 
+      variables: {
         resume_text: body.resumeText,
         job_description: body.jobDescription,
         company_name: body.companyName,
         job_title: body.jobTitle,
-        tone: body.tone
+        tone: body.tone,
       },
-      requiredCredits: 1
+      requiredCredits: 1,
     });
   }
 
   @Post('job-match')
   @ApiOperation({ summary: 'Analyze Job Match' })
-  async jobMatch(@Request() req: any, @Body() body: { resumeText: string, jobDescription: string }) {
+  async jobMatch(
+    @Request() req: any,
+    @Body() body: { resumeText: string; jobDescription: string },
+  ) {
     return this.aiService.executeFeature({
       userId: req.user.id,
       featureName: 'JOB_MATCH',
-      variables: { 
+      variables: {
         resume_text: body.resumeText,
-        job_description: body.jobDescription
+        job_description: body.jobDescription,
       },
-      requiredCredits: 1
+      requiredCredits: 1,
     });
   }
 
   @Post('skill-gap')
   @ApiOperation({ summary: 'Analyze Skill Gap' })
-  async skillGap(@Request() req: any, @Body() body: { currentSkills: string, targetRole: string }) {
+  async skillGap(
+    @Request() req: any,
+    @Body() body: { currentSkills: string; targetRole: string },
+  ) {
     return this.aiService.executeFeature({
       userId: req.user.id,
       featureName: 'SKILL_GAP',
-      variables: { 
+      variables: {
         current_skills: body.currentSkills,
-        target_role: body.targetRole
+        target_role: body.targetRole,
       },
-      requiredCredits: 1
+      requiredCredits: 1,
     });
   }
 
   @Post('career')
   @ApiOperation({ summary: 'Career Advisor' })
-  async careerAdvisor(@Request() req: any, @Body() body: { profileData: string, goals: string }) {
+  async careerAdvisor(
+    @Request() req: any,
+    @Body() body: { profileData: string; goals: string },
+  ) {
     return this.aiService.executeFeature({
       userId: req.user.id,
       featureName: 'CAREER_ADVISOR',
-      variables: { 
+      variables: {
         profile_data: body.profileData,
-        goals: body.goals
+        goals: body.goals,
       },
-      requiredCredits: 1
+      requiredCredits: 1,
     });
   }
 
   @Post('interview/questions')
   @ApiOperation({ summary: 'Generate Interview Questions' })
-  async interviewQuestions(@Request() req: any, @Body() body: { role: string, type: string, difficulty: string }) {
+  async interviewQuestions(
+    @Request() req: any,
+    @Body() body: { role: string; type: string; difficulty: string },
+  ) {
     return this.aiService.executeFeature({
       userId: req.user.id,
       featureName: 'INTERVIEW_QUESTIONS',
-      variables: { 
+      variables: {
         role: body.role,
         type: body.type, // e.g. HR, Technical, Behavioural
-        difficulty: body.difficulty
+        difficulty: body.difficulty,
       },
-      requiredCredits: 1
+      requiredCredits: 1,
     });
   }
 

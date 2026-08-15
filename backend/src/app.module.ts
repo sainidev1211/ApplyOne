@@ -47,7 +47,8 @@ import { AuditModule } from './audit/audit.module.js';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [appConfig, jwtConfig, groqConfig],
-      envFilePath: '.env',
+      // One shared root .env; only VITE_* keys are exposed to the browser.
+      envFilePath: '../.env',
     }),
 
     // Rate Limiting
@@ -89,9 +90,9 @@ import { AuditModule } from './audit/audit.module.js';
     SearchModule,
     AiAnalyticsModule,
     RedisCacheModule,
-    QueueModule,
+    QueueModule.register(),
     NotificationsModule,
-    AuditModule
+    AuditModule,
   ],
 })
 export class AppModule implements NestModule {

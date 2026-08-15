@@ -83,6 +83,9 @@ export function DashboardLayout() {
 
   const sidebarLinks = [
     { label: 'Home Page', href: ROUTES.HOME, icon: '🏠' },
+    ...(profile?.role?.toUpperCase() === 'ADMIN'
+      ? [{ label: 'Admin Panel', href: ROUTES.ADMIN, icon: '👮' }]
+      : []),
     { label: 'Applications', href: ROUTES.DASHBOARD, icon: '💼' },
     { 
       label: 'ATS Score Checker', 
@@ -132,7 +135,7 @@ export function DashboardLayout() {
         {/* User profile section in Sidebar */}
         <div className="p-4 border-t border-border-light dark:border-border-dark space-y-4">
           <div className="flex items-center space-x-3">
-            <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold shadow-sm">
+            <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold shadow-sm">
               {profile?.full_name ? getInitials(profile.full_name) : 'U'}
             </div>
             <div className="flex-1 min-w-0 text-left">
@@ -248,7 +251,7 @@ export function DashboardLayout() {
                 aria-haspopup="true"
                 aria-expanded={dropdownOpen}
               >
-                <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold shadow-sm flex-shrink-0">
+                <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold shadow-sm flex-shrink-0">
                   {profile?.full_name ? getInitials(profile.full_name) : 'U'}
                 </div>
               </button>

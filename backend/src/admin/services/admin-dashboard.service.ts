@@ -34,10 +34,18 @@ export class AdminDashboardService {
       this.prisma.company.count(),
       this.prisma.job.count(),
       this.prisma.application.count({ where: { createdAt: { gte: today } } }),
-      this.prisma.application.count({ where: { createdAt: { gte: startOfWeek } } }),
-      this.prisma.application.count({ where: { status: ApplicationStatus.PENDING } }),
-      this.prisma.application.count({ where: { status: ApplicationStatus.ASSIGNED } }),
-      this.prisma.application.count({ where: { status: ApplicationStatus.APPLIED } }),
+      this.prisma.application.count({
+        where: { createdAt: { gte: startOfWeek } },
+      }),
+      this.prisma.application.count({
+        where: { status: ApplicationStatus.PENDING },
+      }),
+      this.prisma.application.count({
+        where: { status: ApplicationStatus.ASSIGNED },
+      }),
+      this.prisma.application.count({
+        where: { status: ApplicationStatus.APPLIED },
+      }),
     ]);
 
     return {
@@ -49,7 +57,7 @@ export class AdminDashboardService {
         pendingApps,
         assignedApps,
         completedApps,
-      }
+      },
     };
   }
 }

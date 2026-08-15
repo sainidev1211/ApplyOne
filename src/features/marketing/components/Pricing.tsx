@@ -15,7 +15,7 @@ export function Pricing() {
         <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
           <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-text-primary-light dark:text-text-primary-dark">
             Simple, Transparent{' '}
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
               Pricing
             </span>
           </h2>
@@ -39,9 +39,9 @@ export function Pricing() {
                 className="flex"
               >
                 <Card
-                  className={`relative flex flex-col justify-between w-full h-full text-left p-6 md:p-8 bg-white dark:bg-card-dark transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:border-blue-500/40 dark:hover:border-purple-500/40 ${
+                  className={`relative flex flex-col justify-between w-full h-full text-left p-6 md:p-8 bg-white dark:bg-card-dark transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:border-blue-500/40 dark:hover:border-cyan-500/40 ${
                     isPopular
-                      ? 'border-2 border-purple-500 shadow-xl scale-100 md:scale-[1.03] z-10'
+                      ? 'border-2 border-cyan-500 shadow-xl scale-100 md:scale-[1.03] z-10'
                       : 'border border-border-light dark:border-border-dark'
                   }`}
                 >

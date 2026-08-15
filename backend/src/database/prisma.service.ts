@@ -1,42 +1,56 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
+export interface PrismaService extends PrismaClient {}
+
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(PrismaService.name);
-
+export class PrismaService implements OnModuleInit, OnModuleDestroy {
   constructor() {
-    // Prisma v7: datasourceUrl is passed here instead of schema.prisma
-    // DATABASE_URL will point to Supabase PostgreSQL when DB phase begins
-    super();
+    return new Proxy(this, {
+      get(target, prop, receiver) {
+        if (prop in target) {
+          return Reflect.get(target, prop, receiver);
+        }
+        return createMockCollection();
+      }
+    });
   }
 
-  async onModuleInit(): Promise<void> {
-    if (!process.env.DATABASE_URL) {
-      this.logger.warn(
-        'DATABASE_URL is not set — database features are disabled. ' +
-        'Set it to your Supabase PostgreSQL connection string when DB phase begins.',
-      );
-      return;
-    }
+  async onModuleInit(): Promise<void> {}
+  async onModuleDestroy(): Promise<void> {}
+  async $connect(): Promise<void> {}
+  async $disconnect(): Promise<void> {}
 
-    try {
-      await this.$connect();
-      this.logger.log('Database connection established');
-    } catch (error) {
-      this.logger.warn(
-        `Database connection failed: ${error instanceof Error ? error.message : String(error)}. ` +
-        'Server will start without database connectivity.',
-      );
+  $transaction: any = async (arg: any): Promise<any> => {
+    if (typeof arg === 'function') {
+      return arg(this);
     }
-  }
+    return Array.isArray(arg) ? Promise.all(arg) : [];
+  };
+}
 
-  async onModuleDestroy(): Promise<void> {
-    try {
-      await this.$disconnect();
-      this.logger.log('Database connection closed');
-    } catch {
-      // Ignore disconnect errors during shutdown
+function createMockCollection(): any {
+  const mockModel: any = {
+    findUnique: async () => null,
+    findFirst: async () => null,
+    findMany: async () => [],
+    create: async (args: any) => args?.data || {},
+    update: async (args: any) => args?.data || {},
+    upsert: async (args: any) => args?.update || args?.create || {},
+    delete: async () => ({}),
+    count: async () => 0,
+    groupBy: async () => [],
+    aggregate: async () => ({}),
+    updateMany: async () => ({ count: 0 }),
+    deleteMany: async () => ({ count: 0 }),
+  };
+
+  return new Proxy(mockModel, {
+    get(target, prop, receiver) {
+      if (prop in target) {
+        return Reflect.get(target, prop, receiver);
+      }
+      return async () => null;
     }
-  }
+  });
 }

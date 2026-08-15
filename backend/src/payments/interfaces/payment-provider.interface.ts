@@ -25,7 +25,9 @@ export interface PaymentSessionResponse {
 }
 
 export interface IPaymentProvider {
-  createSession(params: CreatePaymentSessionParams): Promise<PaymentSessionResponse>;
+  createSession(
+    params: CreatePaymentSessionParams,
+  ): Promise<PaymentSessionResponse>;
   verifyPayment(params: VerifyPaymentParams): Promise<boolean>;
   refundPayment(params: RefundPaymentParams): Promise<string>;
 }

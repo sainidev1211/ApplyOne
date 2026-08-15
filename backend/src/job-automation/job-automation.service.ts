@@ -10,20 +10,25 @@ export class JobAutomationService {
 
   constructor(
     private readonly prisma: PrismaService,
-    @InjectQueue('background-jobs') private readonly backgroundQueue: Queue
+    @InjectQueue('background-jobs') private readonly backgroundQueue: Queue,
   ) {}
 
   // Run every night at midnight to import jobs
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async handleDailyJobImports() {
     this.logger.log('Running scheduled daily job imports...');
-    const sources = await this.prisma.jobImportSource.findMany({ where: { isActive: true } });
+    const sources = await this.prisma.jobImportSource.findMany({
+      where: { isActive: true },
+    });
 
     for (const source of sources) {
       try {
         await this.backgroundQueue.add('importJobs', { sourceId: source.id });
       } catch (error) {
-        this.logger.error(`Scheduled import failed for source ${source.id}`, error);
+        this.logger.error(
+          `Scheduled import failed for source ${source.id}`,
+          error,
+        );
       }
     }
   }
@@ -33,13 +38,13 @@ export class JobAutomationService {
   async handleJobExpiry() {
     this.logger.log('Running scheduled job expiry detection...');
     const now = new Date();
-    
+
     const result = await this.prisma.job.updateMany({
       where: {
         status: 'ACTIVE',
-        expiresAt: { lt: now }
+        expiresAt: { lt: now },
       },
-      data: { status: 'EXPIRED' }
+      data: { status: 'EXPIRED' },
     });
 
     if (result.count > 0) {

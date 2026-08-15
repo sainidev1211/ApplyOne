@@ -23,12 +23,29 @@ async function bootstrap(): Promise<void> {
   app.use(compression());
 
   // ── CORS ────────────────────────────────────────────────────
+  const corsOrigin = configService.get<string>('FRONTEND_URL');
+  if (!corsOrigin && nodeEnv === 'production') {
+    logger.warn(
+      'FRONTEND_URL is not defined. CORS will only allow the hardcoded production URLs. ' +
+        'For production, set FRONTEND_URL environment variable.',
+    );
+  }
+
+  const corsOrigins =
+    nodeEnv === 'production'
+      ? corsOrigin
+        ? corsOrigin.split(',').map((url) => url.trim())
+        : ['https://applyone.co', 'https://www.applyone.co']
+      : [
+          corsOrigin || 'http://localhost:5173',
+          'http://localhost:5174',
+          'http://localhost:3001',
+          'http://127.0.0.1:5173',
+          'http://127.0.0.1:5174',
+        ];
 
   app.enableCors({
-    origin:
-      nodeEnv === 'production'
-        ? ['https://applyone.co', 'https://www.applyone.co']
-        : ['http://localhost:5173', 'http://localhost:3001', 'http://127.0.0.1:5173'],
+    origin: corsOrigins,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID'],
     credentials: true,
@@ -51,7 +68,10 @@ async function bootstrap(): Promise<void> {
 
   // ── Global Filters & Interceptors ───────────────────────────
   app.useGlobalFilters(new GlobalExceptionFilter());
-  app.useGlobalInterceptors(new LoggingInterceptor(), new ResponseInterceptor());
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+    new ResponseInterceptor(),
+  );
 
   // ── Swagger (non-production only) ───────────────────────────
   if (nodeEnv !== 'production') {
@@ -97,12 +117,16 @@ async function bootstrap(): Promise<void> {
   // ── Graceful shutdown ────────────────────────────────────────
   app.enableShutdownHooks();
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
-  logger.log(`🚀 ApplyOne Backend → http://localhost:${port}`);
-  logger.log(`📦 API Base       → http://localhost:${port}/api/v1`);
-  logger.log(`🏥 Health         → http://localhost:${port}/health`);
-  logger.log(`🌍 Environment    → ${nodeEnv}`);
+  if (nodeEnv !== 'production') {
+    logger.log(`🚀 ApplyOne Backend → http://localhost:${port}`);
+    logger.log(`📦 API Base       → http://localhost:${port}/api/v1`);
+    logger.log(`🏥 Health         → http://localhost:${port}/health`);
+  } else {
+    logger.log(`Backend started on port ${port}`);
+  }
+  logger.log(`Environment: ${nodeEnv}`);
 }
 
 bootstrap().catch((error: unknown) => {

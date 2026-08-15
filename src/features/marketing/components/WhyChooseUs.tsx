@@ -32,7 +32,7 @@ export function WhyChooseUs() {
       
       {/* Background decorations */}
       <div className="absolute top-0 right-0 w-[400px] h-[400px] rounded-full bg-blue-500/5 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-purple-500/5 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-cyan-500/5 blur-3xl pointer-events-none" />
 
       <Container>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
@@ -98,7 +98,7 @@ export function WhyChooseUs() {
                 {/* Velocity Indicator */}
                 <div className="p-4 bg-slate-50 dark:bg-bg-dark rounded-xl border border-border-light dark:border-border-dark flex items-center justify-between">
                   <div>
-                    <span className="block text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    <span className="block text-2xl font-black bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
                       10x Faster
                     </span>
                     <span className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
@@ -142,7 +142,7 @@ export function WhyChooseUs() {
               </span>
               <h2 className="text-4xl sm:text-6xl font-black tracking-tight text-text-primary-light dark:text-text-primary-dark leading-tight">
                 Why{' '}
-                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
                   Choose Us?
                 </span>
               </h2>

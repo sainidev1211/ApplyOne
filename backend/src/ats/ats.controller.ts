@@ -1,4 +1,11 @@
-import { Controller, Get, Post, Body, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AtsService, AtsCheckDto } from './ats.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
@@ -13,6 +20,12 @@ export class AtsController {
   @Post('check')
   @ApiOperation({ summary: 'Run ATS check on a resume' })
   check(@Request() req: any, @Body() dto: AtsCheckDto) {
+    return this.atsService.runAtsCheck(req.user.id, dto);
+  }
+
+  @Post('analyze')
+  @ApiOperation({ summary: 'Analyze the saved uploaded resume' })
+  analyze(@Request() req: any, @Body() dto: AtsCheckDto) {
     return this.atsService.runAtsCheck(req.user.id, dto);
   }
 

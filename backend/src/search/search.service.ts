@@ -9,7 +9,7 @@ export class SearchService {
     // 1. Log query for analytics (Autocomplete / Recent Searches)
     if (query && query.length > 2) {
       await this.prisma.searchQueryLog.create({
-        data: { userId, query }
+        data: { userId, query },
       });
     }
 
@@ -22,11 +22,11 @@ export class SearchService {
         OR: [
           { title: { contains: query, mode: 'insensitive' } },
           { description: { contains: query, mode: 'insensitive' } },
-          { company: { name: { contains: query, mode: 'insensitive' } } }
-        ]
+          { company: { name: { contains: query, mode: 'insensitive' } } },
+        ],
       },
       include: { company: true },
-      take: 20
+      take: 20,
     });
   }
 
@@ -37,7 +37,7 @@ export class SearchService {
       where: { query: { contains: query, mode: 'insensitive' } },
       _count: { query: true },
       orderBy: { _count: { query: 'desc' } },
-      take: 5
+      take: 5,
     });
 
     return results.map((r: any) => r.query);
@@ -49,7 +49,7 @@ export class SearchService {
       orderBy: { createdAt: 'desc' },
       distinct: ['query'],
       take: 5,
-      select: { query: true }
+      select: { query: true },
     });
 
     return results.map((r: any) => r.query);

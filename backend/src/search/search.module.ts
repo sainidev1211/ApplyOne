@@ -5,6 +5,6 @@ import { PrismaService } from '../database/prisma.service.js';
 
 @Module({
   controllers: [SearchController],
-  providers: [SearchService, PrismaService]
+  providers: [SearchService, PrismaService],
 })
 export class SearchModule {}

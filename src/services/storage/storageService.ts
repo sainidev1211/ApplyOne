@@ -1,6 +1,6 @@
 import { IStorageService, ServiceResponse } from '@/types/services';
 
-class SupabaseStorageService implements IStorageService {
+class LocalStorageService implements IStorageService {
   async uploadFile(
     bucket: string,
     path: string,
@@ -70,4 +70,4 @@ class SupabaseStorageService implements IStorageService {
   }
 }
 
-export const storageService: IStorageService = new SupabaseStorageService();
+export const storageService: IStorageService = new LocalStorageService();

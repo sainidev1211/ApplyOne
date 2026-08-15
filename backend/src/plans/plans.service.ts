@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service.js';
 import { CreatePlanDto, UpdatePlanDto } from './dto/plan.dto.js';
 import { PlanStatus, Prisma } from '@prisma/client';
@@ -21,17 +25,22 @@ export class PlansService {
   }
 
   async getPlanById(id: string) {
-    const plan = await this.prisma.subscriptionPlan.findUnique({ where: { id } });
+    const plan = await this.prisma.subscriptionPlan.findUnique({
+      where: { id },
+    });
     if (!plan) throw new NotFoundException('Plan not found');
     return plan;
   }
 
   async createPlan(dto: CreatePlanDto) {
-    const existing = await this.prisma.subscriptionPlan.findUnique({ where: { slug: dto.slug } });
-    if (existing) throw new BadRequestException('Plan with this slug already exists');
+    const existing = await this.prisma.subscriptionPlan.findUnique({
+      where: { slug: dto.slug },
+    });
+    if (existing)
+      throw new BadRequestException('Plan with this slug already exists');
 
     return this.prisma.subscriptionPlan.create({
-      data: dto as Prisma.SubscriptionPlanCreateInput,
+      data: dto,
     });
   }
 
@@ -39,7 +48,7 @@ export class PlansService {
     await this.getPlanById(id);
     return this.prisma.subscriptionPlan.update({
       where: { id },
-      data: dto as Prisma.SubscriptionPlanUpdateInput,
+      data: dto,
     });
   }
 
@@ -54,19 +63,19 @@ export class PlansService {
   async getPlanComparison() {
     const plans = await this.getPublicPlans();
     return {
-      features: plans.map(p => p.features),
-      limits: plans.map(p => ({
+      features: plans.map((p) => p.features),
+      limits: plans.map((p) => ({
         name: p.name,
         aiCredits: p.aiCredits,
         resumeCredits: p.resumeCredits,
         jobCredits: p.jobCredits,
         atsCredits: p.atsCredits,
-        maxApplications: p.maxApplications
+        maxApplications: p.maxApplications,
       })),
-      pricing: plans.map(p => ({
+      pricing: plans.map((p) => ({
         name: p.name,
         monthly: p.monthlyPrice,
-        yearly: p.yearlyPrice
+        yearly: p.yearlyPrice,
       })),
     };
   }
