@@ -19,6 +19,7 @@ const Subscriptions = lazy(() => import('@/pages/Subscriptions'));
 const AtsChecker = lazy(() => import('@/pages/AtsChecker'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const AdminPanel = lazy(() => import('@/pages/AdminPanel'));
+const AdminLogin = lazy(() => import('@/features/admin/AdminLogin'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('@/pages/TermsOfService'));
 
@@ -49,6 +50,10 @@ export function AppRoutes() {
           <Route path="/auth/callback" element={<AuthCallback />} />
         </Route>
 
+        {/* Secret Admin Authentication */}
+        <Route path="/portal-access/login" element={<AdminLogin />} />
+        <Route path="/admin-login" element={<AdminLogin />} />
+
         {/* Dashboard Shell Wrapper locked behind Protected Guard */}
         <Route
           element={
@@ -63,18 +68,27 @@ export function AppRoutes() {
           <Route path="/dashboard/settings" element={<Settings />} />
         </Route>
 
-        {/* Admin Shell Wrapper locked behind Protected Guard + RoleGuard */}
+        {/* Executive Admin Management Portal */}
         <Route
+          path="/portal-access"
           element={
             <ProtectedRoute>
               <RoleGuard allowedRoles={['ADMIN']}>
-                <DashboardLayout />
+                <AdminPanel />
               </RoleGuard>
             </ProtectedRoute>
           }
-        >
-          <Route path="/admin" element={<AdminPanel />} />
-        </Route>
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <RoleGuard allowedRoles={['ADMIN']}>
+                <AdminPanel />
+              </RoleGuard>
+            </ProtectedRoute>
+          }
+        />
 
         {/* Wildcard redirect to Home */}
         <Route path="*" element={<Navigate to="/" replace />} />

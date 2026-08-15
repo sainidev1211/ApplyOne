@@ -9,6 +9,9 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter.
 import { ResponseInterceptor } from './common/interceptors/response.interceptor.js';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js';
 
+import { join } from 'path';
+import express from 'express';
+
 async function bootstrap(): Promise<void> {
   const logger = new Logger('Bootstrap');
 
@@ -18,8 +21,16 @@ async function bootstrap(): Promise<void> {
   const port = configService.get<number>('app.port', 3000);
   const nodeEnv = configService.get<string>('app.nodeEnv', 'development');
 
+  // ── Static Files (Uploads & Resumes) ────────────────────────
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
+  app.use('/uploads', express.static(join(process.cwd(), 'backend', 'uploads')));
+
   // ── Security ────────────────────────────────────────────────
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
   app.use(compression());
 
   // ── CORS ────────────────────────────────────────────────────

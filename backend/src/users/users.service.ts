@@ -136,37 +136,47 @@ export class UsersService {
   async getDashboard(userId: string) {
     const user = await this.getMe(userId);
     const mUser = await this.userModel.findById(userId).exec();
-    const resumeStatus = (mUser && mUser.resumeFileName) ? 'Active' : 'Missing';
-    const activeResume = mUser && mUser.resumeFileName ? {
-      id: 'resume-1',
-      userId,
-      fileName: mUser.resumeFileName,
-      storagePath: mUser.resumePath || '',
-      fileSize: 1000,
-      mimeType: 'application/pdf',
-      version: 1,
-      isDefault: true,
-      status: 'ACTIVE',
-      createdAt: new Date().toISOString()
-    } : null;
+    const resumeStatus = mUser && mUser.resumeFileName ? 'Active' : 'Missing';
+    const activeResume =
+      mUser && mUser.resumeFileName
+        ? {
+            id: 'resume-1',
+            userId,
+            fileName: mUser.resumeFileName,
+            storagePath: mUser.resumePath || '',
+            fileSize: 1000,
+            mimeType: 'application/pdf',
+            version: 1,
+            isDefault: true,
+            status: 'ACTIVE',
+            createdAt: new Date().toISOString(),
+          }
+        : null;
+
+    const dbData = (mUser as any)?.dashboardData || {};
+    const notifications = (mUser as any)?.notifications || [];
 
     return {
       userInfo: user,
-      currentPlan: 'Free',
-      remainingCredits: {
-        job: 0,
-        ai: 0,
-        resume: 0,
-        ats: 0,
+      currentPlan: dbData.currentPlan || 'Free',
+      remainingCredits: dbData.remainingCredits || {
+        job: 10,
+        ai: 5,
+        resume: 3,
+        ats: 5,
       },
       resumeStatus,
       activeResume,
-      applicationsCount: 0,
-      interviewCount: 0,
-      offerCount: 0,
-      jobsInProgress: 0,
-      recentActivity: [],
-      profileCompletion: this.calculateProfileCompletion(mUser ? mUser.toObject() : {}).completionPercentage,
+      applicationsCount: dbData.applicationsCount ?? 0,
+      interviewCount: dbData.interviewCount ?? 0,
+      offerCount: dbData.offerCount ?? 0,
+      jobsInProgress: dbData.jobsInProgress ?? 0,
+      adminMessage: dbData.adminMessage || '',
+      recentActivity: dbData.recentActivity || [],
+      notifications,
+      profileCompletion: this.calculateProfileCompletion(
+        mUser ? mUser.toObject() : {},
+      ).completionPercentage,
     };
   }
 

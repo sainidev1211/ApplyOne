@@ -1,63 +1,68 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../database/prisma.service.js';
-import { ApplicationStatus, UserRole } from '@prisma/client';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { User, UserDocument } from '../../users/schemas/user.schema.js';
 
 @Injectable()
 export class AdminDashboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+  ) {}
 
   async getDashboardMetrics() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const startOfWeek = new Date();
-    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-    startOfWeek.setHours(0, 0, 0, 0);
-
     const [
       totalUsers,
       activeUsers,
-      totalEmployees,
       totalAdmins,
-      totalCompanies,
-      totalJobs,
-      applicationsToday,
-      applicationsThisWeek,
-      pendingApps,
-      assignedApps,
-      completedApps,
+      studentsCount,
+      freshersCount,
+      professionalsCount,
+      usersWithResumes,
+      recentUsers,
     ] = await Promise.all([
-      this.prisma.user.count(),
-      this.prisma.user.count({ where: { isActive: true } }),
-      this.prisma.user.count({ where: { role: UserRole.EMPLOYEE } }),
-      this.prisma.user.count({ where: { role: UserRole.ADMIN } }),
-      this.prisma.company.count(),
-      this.prisma.job.count(),
-      this.prisma.application.count({ where: { createdAt: { gte: today } } }),
-      this.prisma.application.count({
-        where: { createdAt: { gte: startOfWeek } },
-      }),
-      this.prisma.application.count({
-        where: { status: ApplicationStatus.PENDING },
-      }),
-      this.prisma.application.count({
-        where: { status: ApplicationStatus.ASSIGNED },
-      }),
-      this.prisma.application.count({
-        where: { status: ApplicationStatus.APPLIED },
-      }),
+      this.userModel.countDocuments().exec(),
+      this.userModel.countDocuments({ isActive: true }).exec(),
+      this.userModel.countDocuments({ role: 'ADMIN' }).exec(),
+      this.userModel.countDocuments({ accountType: 'STUDENT' }).exec(),
+      this.userModel.countDocuments({ accountType: 'FRESHER' }).exec(),
+      this.userModel.countDocuments({ accountType: 'PROFESSIONAL' }).exec(),
+      this.userModel.countDocuments({
+        $or: [
+          { resumeFileName: { $exists: true, $ne: '' } },
+          { 'resumes.0': { $exists: true } },
+        ],
+      }).exec(),
+      this.userModel
+        .find()
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select('_id email fullName phone accountType role resumeFileName createdAt isActive')
+        .lean()
+        .exec(),
     ]);
 
     return {
-      users: { totalUsers, activeUsers, totalEmployees, totalAdmins },
-      content: { totalCompanies, totalJobs },
-      applications: {
-        applicationsToday,
-        applicationsThisWeek,
-        pendingApps,
-        assignedApps,
-        completedApps,
+      overview: {
+        totalUsers,
+        activeUsers,
+        totalAdmins,
+        usersWithResumes,
+        studentsCount,
+        freshersCount,
+        professionalsCount,
       },
+      recentUsers: recentUsers.map((u: any) => ({
+        id: u._id || u.email,
+        email: u.email,
+        fullName: u.fullName,
+        phone: u.phone || null,
+        accountType: u.accountType,
+        role: u.role,
+        hasResume: Boolean(u.resumeFileName),
+        resumeFileName: u.resumeFileName || null,
+        createdAt: u.createdAt,
+        isActive: u.isActive ?? true,
+      })),
     };
   }
 }

@@ -113,6 +113,15 @@ export class User {
   @Prop({ type: Object, default: {} })
   preferences?: Record<string, unknown>;
 
+  @Prop({ type: Object, default: {} })
+  dashboardData?: Record<string, any>;
+
+  @Prop({ type: [Object], default: [] })
+  notifications?: Record<string, any>[];
+
+  @Prop()
+  adminNotes?: string;
+
   // Resumes belong to the MongoDB user account. The top-level legacy fields
   // above are kept for backwards compatibility with existing accounts.
   @Prop({ type: [StoredResumeSchema], default: [] })

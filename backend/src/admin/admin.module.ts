@@ -1,5 +1,7 @@
-import { PrismaService } from '../database/prisma.service.js';
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { User, UserSchema } from '../users/schemas/user.schema.js';
+import { PrismaService } from '../database/prisma.service.js';
 import { AdminDashboardController } from './controllers/admin-dashboard.controller.js';
 import { AdminDashboardService } from './services/admin-dashboard.service.js';
 import { AdminUsersController } from './controllers/admin-users.controller.js';
@@ -12,6 +14,9 @@ import { AdminAuditController } from './controllers/admin-audit.controller.js';
 import { AdminAuditService } from './services/admin-audit.service.js';
 
 @Module({
+  imports: [
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+  ],
   controllers: [
     AdminDashboardController,
     AdminUsersController,
@@ -27,5 +32,6 @@ import { AdminAuditService } from './services/admin-audit.service.js';
     AdminSettingsService,
     AdminAuditService,
   ],
+  exports: [AdminUsersService, AdminDashboardService],
 })
 export class AdminModule {}

@@ -1,62 +1,96 @@
 import {
   Controller,
   Get,
-  Patch,
+  Put,
   Post,
+  Delete,
   Body,
   Param,
   Query,
   UseGuards,
-  Request,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminUsersService } from '../services/admin-users.service.js';
-import { UpdateUserRoleDto } from '../dto/admin.dto.js';
 import { PaginationQueryDto } from '../../users/dto/pagination-query.dto.js';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../auth/guards/roles.guard.js';
 import { Roles } from '../../auth/decorators/roles.decorator.js';
-import { UserRole } from '@prisma/client';
 
 @ApiTags('Admin / Users')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
+@ApiBearerAuth('JWT')
 @Controller('admin/users')
 export class AdminUsersController {
   constructor(private readonly adminUsersService: AdminUsersService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List all users (with search/pagination)' })
-  findAll(@Query() query: PaginationQueryDto) {
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'List all registered MongoDB users with search & filters' })
+  findAll(
+    @Query() query: PaginationQueryDto & { accountType?: string; hasResume?: string },
+  ) {
     return this.adminUsersService.findAll(query);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get extensive user details' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Get full user details including resumes, dashboard data, preferences' })
   findOne(@Param('id') id: string) {
     return this.adminUsersService.findOne(id);
   }
 
-  @Patch(':id/role')
-  @ApiOperation({ summary: 'Update user role' })
-  updateRole(
-    @Request() req: any,
+  @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Update user core and profile data directly in MongoDB' })
+  updateUser(@Param('id') id: string, @Body() body: Record<string, any>) {
+    return this.adminUsersService.updateUser(id, body);
+  }
+
+  @Put(':id/dashboard')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Push customized dashboard data to user account (credits, applications, plan)' })
+  updateUserDashboard(@Param('id') id: string, @Body() body: Record<string, any>) {
+    return this.adminUsersService.updateUserDashboard(id, body);
+  }
+
+  @Post(':id/notify')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Send direct in-app notification to specific user' })
+  sendNotification(
     @Param('id') id: string,
-    @Body() dto: UpdateUserRoleDto,
+    @Body() body: { title: string; message: string; type?: string; link?: string },
   ) {
-    return this.adminUsersService.updateRole(req.user.id, id, dto);
+    return this.adminUsersService.sendUserNotification(id, body);
   }
 
-  @Post(':id/block')
-  @ApiOperation({ summary: 'Block user' })
-  blockUser(@Request() req: any, @Param('id') id: string) {
-    return this.adminUsersService.toggleUserStatus(req.user.id, id, false);
+  @Post('broadcast-notification')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Broadcast in-app notification to all active users' })
+  broadcastNotification(
+    @Body() body: { title: string; message: string; type?: string; link?: string },
+  ) {
+    return this.adminUsersService.broadcastNotification(body);
   }
 
-  @Post(':id/activate')
-  @ApiOperation({ summary: 'Activate user' })
-  activateUser(@Request() req: any, @Param('id') id: string) {
-    return this.adminUsersService.toggleUserStatus(req.user.id, id, true);
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Permanently delete user' })
+  deleteUser(@Param('id') id: string) {
+    return this.adminUsersService.deleteUser(id);
+  }
+
+  @Post('seed-admin-account')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Seed default admin account if not created' })
+  seedAdmin() {
+    return this.adminUsersService.seedDefaultAdmin();
   }
 }
