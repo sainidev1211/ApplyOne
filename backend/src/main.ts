@@ -46,7 +46,7 @@ async function bootstrap(): Promise<void> {
     nodeEnv === 'production'
       ? corsOrigin
         ? corsOrigin.split(',').map((url) => url.trim())
-        : ['https://applyone.co', 'https://www.applyone.co']
+        : ['https://applyone.co', 'https://www.applyone.co', 'https://applyone.co.in', 'https://www.applyone.co.in']
       : [
           corsOrigin || 'http://localhost:5173',
           'http://localhost:5174',

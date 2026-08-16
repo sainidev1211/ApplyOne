@@ -9,9 +9,11 @@ import { TokenUsageService } from './history/token-usage.service.js';
 import { GeminiProvider } from './providers/gemini.provider.js';
 import { GroqAiAdapter } from './adapters/groq-ai.adapter.js';
 import { FeatureAccessService } from '../feature-access/feature-access.service.js';
-import { CreditsService } from '../credits/credits.service.js';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module.js';
+import { CreditsModule } from '../credits/credits.module.js';
 
 @Module({
+  imports: [SubscriptionsModule, CreditsModule],
   controllers: [AiFeaturesController],
   providers: [
     PrismaService,
@@ -23,7 +25,6 @@ import { CreditsService } from '../credits/credits.service.js';
     GeminiProvider,
     GroqAiAdapter,
     FeatureAccessService,
-    CreditsService,
   ],
   // Feature modules such as ATS use the configured provider directly for
   // document analysis, so expose it alongside the orchestration service.

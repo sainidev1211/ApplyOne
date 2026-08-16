@@ -5,7 +5,17 @@
 
 import { getStoredSession } from '@/services/authClient';
 
-const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/v1`;
+function normalizeBase(url?: string) {
+  if (!url) return 'http://localhost:3000';
+  // strip any trailing slash
+  let u = url.trim();
+  if (u.endsWith('/')) u = u.slice(0, -1);
+  // strip accidental /api or /api/v1 suffix
+  u = u.replace(/\/api(?:\/v1)?$/i, '');
+  return u;
+}
+
+const API_BASE = `${normalizeBase(import.meta.env.VITE_API_URL)}${normalizeBase(import.meta.env.VITE_API_URL) === 'http://localhost:3000' ? '' : ''}/api/v1`;
 
 // ---------------------------------------------------------------------------
 // Core fetch wrapper
@@ -60,6 +70,14 @@ async function apiFormData<T>(path: string, formData: FormData): Promise<T> {
   }
   return (body.data ?? body) as T;
 }
+
+// ---------------------------------------------------------------------------
+// Subscriptions
+// ---------------------------------------------------------------------------
+export const subscriptionsApi = {
+  getCurrent: () => apiFetch<any>('/subscription'),
+  getHistory: () => apiFetch<any[]>('/subscription/history'),
+};
 
 // ---------------------------------------------------------------------------
 // Users / Profile
@@ -123,6 +141,31 @@ export const usersApi = {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
+};
+
+// ---------------------------------------------------------------------------
+// Payments
+// ---------------------------------------------------------------------------
+export const paymentsApi = {
+  createSession: (dto: { planId: string; provider: string; couponCode?: string; successUrl: string; cancelUrl: string; }) =>
+    apiFetch<any>('/payments/create-session', {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    }),
+  verifyRazorpay: (payload: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string; }) =>
+    apiFetch<any>('/razorpay/verify-payment', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getHistory: () => apiFetch<any>('/payments/history'),
+};
+
+// ---------------------------------------------------------------------------
+// Plans
+// ---------------------------------------------------------------------------
+export const plansApi = {
+  getPublic: () => apiFetch<any[]>('/plans/public'),
+  getById: (id: string) => apiFetch<any>(`/plans/${id}`),
 };
 
 // ---------------------------------------------------------------------------

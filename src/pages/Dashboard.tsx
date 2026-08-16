@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -7,7 +8,8 @@ import { SEO } from '@/components/shared/SEO';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 import { EmptyState, ErrorState } from '@/components/ui/States';
 import { toast } from '@/store/toastStore';
-import { usersApi, resumeApi, applicationsApi, DashboardData, Application, Resume } from '@/services/api/apiClient';
+import { usersApi, resumeApi, applicationsApi, DashboardData, Application, Resume, plansApi, paymentsApi } from '@/services/api/apiClient';
+import RazorpayCheckout from '@/components/ui/RazorpayCheckout';
 import { getStoredSession } from '@/services/authClient';
 import { ROUTES } from '@/config/appConfig';
 
@@ -48,6 +50,7 @@ function getResumeFileName(resume: Resume | null): string {
 
 export default function Dashboard() {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
@@ -58,6 +61,8 @@ export default function Dashboard() {
   const [uploadingResume, setUploadingResume] = useState(false);
   const [localResumeError, setLocalResumeError] = useState<string | null>(null);
   const [profileData, setProfileData] = useState<any>(null);
+  const [subscription, setSubscription] = useState<any | null>(null);
+  const [plans, setPlans] = useState<any[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -72,10 +77,12 @@ export default function Dashboard() {
         console.warn('[Demo Mode] Profile fetch failed');
       }
 
-      const [dashRes, appsRes, resumesRes] = await Promise.allSettled([
+      const [dashRes, appsRes, resumesRes, plansRes, paymentsRes] = await Promise.allSettled([
         usersApi.getDashboard(),
         applicationsApi.getAll({ limit: 50 }),
         resumeApi.getAll(),
+        plansApi.getPublic(),
+        paymentsApi.getHistory(),
       ]);
 
       let dashData: DashboardData = {
@@ -139,6 +146,17 @@ export default function Dashboard() {
         if (found) resumeData = found;
       }
 
+      if (plansRes.status === 'fulfilled' && Array.isArray(plansRes.value)) {
+        setPlans(plansRes.value);
+      }
+
+      if (paymentsRes.status === 'fulfilled' && Array.isArray(paymentsRes.value)) {
+        // derive subscription from payments history (last successful)
+        const payments = paymentsRes.value as any[];
+        const success = payments.find((p) => p.status === 'SUCCESS');
+        if (success && success.subscription) setSubscription(success.subscription);
+      }
+
       setDashboard(dashData);
       setApplications(appsData);
       setActiveResume(resumeData);
@@ -152,6 +170,18 @@ export default function Dashboard() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const isSubscriptionUsable = Boolean(
+    subscription &&
+    subscription.status === 'ACTIVE' &&
+    new Date(subscription.expiresAt || 0).getTime() > Date.now(),
+  );
+
+  useEffect(() => {
+    if (!loading && !isSubscriptionUsable) {
+      navigate(ROUTES.SUBSCRIPTIONS, { replace: true });
+    }
+  }, [loading, isSubscriptionUsable, navigate]);
 
   const handleResumeFileSelected = async (file: File) => {
     const maxSizeBytes = 5 * 1024 * 1024;
@@ -307,7 +337,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
           {/* Left Column: Applications List */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className={`lg:col-span-2 space-y-6`}>
             <Card className="overflow-hidden">
               {/* List Toolbar */}
               <div className="p-5 border-b border-border-light dark:border-border-dark bg-white dark:bg-card-dark flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -367,8 +397,36 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* Right Column: Resume Manager Card */}
+          {/* Right Column: Subscription + Resume Manager Column */}
           <div className="space-y-6">
+            <Card className="p-6 border border-border-light dark:border-border-dark bg-white dark:bg-card-dark shadow-md">
+              <h3 className="text-sm font-bold mb-3">Subscription</h3>
+              {subscription && subscription.status === 'ACTIVE' ? (
+                <div>
+                  <div className="text-sm font-semibold">Current Plan: {subscription.plan?.name || '—'}</div>
+                  <div className="text-xs text-text-secondary-light">Start: {new Date(subscription.startDate).toLocaleDateString()}</div>
+                  <div className="text-xs text-text-secondary-light">Expiry: {new Date(subscription.expiresAt).toLocaleDateString()}</div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="text-sm">No active subscription — choose a plan below</div>
+                  <div className="grid grid-cols-1 gap-3 mt-3">
+                    {(plans.length ? plans : [{ id: 'professional', name: 'Professional', monthlyPrice: 999 }]).map((p: any) => (
+                      <div key={p.id} className="flex items-center justify-between">
+                        <div>
+                          <div className="font-semibold">{p.name}</div>
+                          <div className="text-xs text-text-secondary-light">{p.monthlyPrice ? `₹${p.monthlyPrice}` : '—'} / month</div>
+                        </div>
+                        <div>
+                          <RazorpayCheckout planId={p.id} onSuccess={async ()=>{ await loadData(); toast.success('Subscription activated'); }} onError={(e)=>toast.error(e?.message||'Payment failed')} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+
             <Card className="p-6 border border-border-light dark:border-border-dark bg-white dark:bg-card-dark shadow-md flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-4">

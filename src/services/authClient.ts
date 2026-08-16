@@ -1,7 +1,15 @@
 import { AuthSession } from '@/types/auth';
 import { ServiceResponse } from '@/types/services';
 
-const API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/v1`;
+function normalizeBase(url?: string) {
+  if (!url) return 'http://localhost:3000';
+  let u = url.trim();
+  if (u.endsWith('/')) u = u.slice(0, -1);
+  u = u.replace(/\/api(?:\/v1)?$/i, '');
+  return u;
+}
+
+const API_BASE = `${normalizeBase(import.meta.env.VITE_API_URL)}/api/v1`;
 const SESSION_KEY = 'applyone_app_session';
 
 export interface StoredUser {

@@ -1,50 +1,35 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service.js';
-import { SubscriptionStatus } from '@prisma/client';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service.js';
 
 @Injectable()
 export class FeatureAccessService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly subscriptionsService: SubscriptionsService) {}
 
   async canAccessFeature(
     userId: string,
     feature: 'resumeCredits' | 'atsCredits' | 'aiCredits' | 'jobCredits',
   ) {
-    const sub = await this.prisma.subscription.findFirst({
-      where: {
-        userId,
-        status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL] },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    try {
+      const sub = await this.subscriptionsService.getSubscription(userId);
 
-    if (!sub) {
-      return {
-        allowed: false,
-        reason: 'No active subscription found',
-        remainingCredits: 0,
+      const featureMap = {
+        resumeCredits: 'remainingResumeCredits',
+        atsCredits: 'remainingAtsCredits',
+        aiCredits: 'remainingAiCredits',
+        jobCredits: 'remainingJobCredits',
       };
+
+      const dbField = featureMap[feature];
+      const remainingCredits = (sub as any)[dbField] ?? 0;
+
+      if (remainingCredits <= 0) {
+        return { allowed: false, reason: `Insufficient ${feature} credits`, remainingCredits: 0 };
+      }
+
+      return { allowed: true, reason: 'Allowed', remainingCredits };
+    } catch (e) {
+      return { allowed: false, reason: 'No active subscription found', remainingCredits: 0 };
     }
-
-    const featureMap = {
-      resumeCredits: 'remainingResumeCredits',
-      atsCredits: 'remainingAtsCredits',
-      aiCredits: 'remainingAiCredits',
-      jobCredits: 'remainingJobCredits',
-    };
-
-    const dbField = featureMap[feature];
-    const remainingCredits = (sub as any)[dbField];
-
-    if (remainingCredits <= 0) {
-      return {
-        allowed: false,
-        reason: `Insufficient ${feature} credits`,
-        remainingCredits: 0,
-      };
-    }
-
-    return { allowed: true, reason: 'Allowed', remainingCredits };
   }
 
   async validateAndConsume(
@@ -57,42 +42,24 @@ export class FeatureAccessService {
       throw new ForbiddenException(check.reason);
     }
 
+    // Delegate consumption to subscriptions service which manages Mongo state
+    // SubscriptionsService does not yet implement decrement + transactionally log creditTransaction in Postgres.
+    // For now, update subscription counters in Mongo.
     const featureMap = {
       resumeCredits: 'remainingResumeCredits',
       atsCredits: 'remainingAtsCredits',
       aiCredits: 'remainingAiCredits',
       jobCredits: 'remainingJobCredits',
     };
+    const dbField = featureMap[feature] as keyof any;
 
-    const dbField = featureMap[feature];
-
-    const sub = await this.prisma.subscription.findFirst({
-      where: {
-        userId,
-        status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL] },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
+    const sub = await this.subscriptionsService.getSubscription(userId);
     if (!sub) throw new ForbiddenException('No active subscription found');
-    const currentBalance = (sub as any)[dbField];
+    const currentBalance = (sub as any)[dbField] ?? 0;
+    if (currentBalance <= 0) throw new ForbiddenException('Insufficient credits');
 
-    await this.prisma.$transaction([
-      this.prisma.subscription.update({
-        where: { id: sub.id },
-        data: { [dbField]: { decrement: 1 } },
-      }),
-      this.prisma.creditTransaction.create({
-        data: {
-          userId,
-          feature,
-          creditsBefore: currentBalance,
-          creditsUsed: 1,
-          creditsAfter: currentBalance - 1,
-          reason,
-        },
-      }),
-    ]);
+    // decrement in Mongo
+    await (this.subscriptionsService as any).subscriptionModel.findByIdAndUpdate(sub._id, { $inc: { [dbField]: -1 } });
 
     return { consumed: true };
   }

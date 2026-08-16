@@ -27,7 +27,8 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Create a checkout session (Stripe/Razorpay)' })
   createSession(@Request() req: any, @Body() dto: CreatePaymentSessionDto) {
-    return this.paymentsService.createSession(req.user.id, dto);
+    // pass full user object (populated by JwtStrategy) — Mongo stores users
+    return this.paymentsService.createSession(req.user, dto);
   }
 
   @Get('history')

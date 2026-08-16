@@ -1,130 +1,113 @@
-import {
-  Injectable,
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service.js';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { SubscribeDto, CancelSubscriptionDto } from './dto/subscription.dto.js';
-import { SubscriptionStatus } from '@prisma/client';
+import { Subscription, SubscriptionDocument } from './schemas/subscription.schema.js';
+import { Plan, PlanDocument } from '../plans/schemas/plan.schema.js';
 
 @Injectable()
 export class SubscriptionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectModel(Subscription.name) private subscriptionModel: Model<SubscriptionDocument>,
+    @InjectModel(Plan.name) private planModel: Model<PlanDocument>,
+  ) {}
 
   async getSubscription(userId: string) {
-    const sub = await this.prisma.subscription.findFirst({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      include: { plan: true },
-    });
+    const sub = await this.subscriptionModel.findOne({ userId }).sort({ createdAt: -1 }).lean();
     if (!sub) throw new NotFoundException('No subscription found');
-    return sub;
+    const plan = await this.planModel.findOne({ id: sub.planId }).lean();
+    return { ...sub, plan };
   }
 
   async getHistory(userId: string) {
-    return this.prisma.subscription.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      include: { plan: true },
-    });
+    const subs = await this.subscriptionModel.find({ userId }).sort({ createdAt: -1 }).lean();
+    const planIds = subs.map((s) => s.planId);
+    const plans = await this.planModel.find({ id: { $in: planIds } }).lean();
+    const planMap = new Map(plans.map((p: any) => [p.id, p]));
+    return subs.map((s: any) => ({ ...s, plan: planMap.get(s.planId) }));
   }
 
   async subscribe(userId: string, dto: SubscribeDto) {
-    const plan = await this.prisma.subscriptionPlan.findUnique({
-      where: { id: dto.planId },
-    });
+    const plan = await this.planModel.findOne({ id: dto.planId }).lean();
     if (!plan) throw new NotFoundException('Plan not found');
 
-    const existingActive = await this.prisma.subscription.findFirst({
-      where: {
-        userId,
-        status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL] },
-      },
+    const existingActive = await this.subscriptionModel.findOne({
+      userId,
+      status: { $in: ['ACTIVE', 'TRIAL'] },
     });
 
     if (existingActive) {
       if (existingActive.planId === plan.id) {
-        throw new BadRequestException(
-          'You are already subscribed to this plan',
-        );
+        throw new BadRequestException('You are already subscribed to this plan');
       }
-      // Cancel old subscription
-      await this.prisma.subscription.update({
-        where: { id: existingActive.id },
-        data: {
-          status: SubscriptionStatus.CANCELLED,
-          cancelledAt: new Date(),
-          cancellationReason: 'Upgraded/Downgraded',
-        },
+      await this.subscriptionModel.findByIdAndUpdate(existingActive._id, {
+        status: 'CANCELLED',
+        cancelledAt: new Date(),
+        cancellationReason: 'Upgraded/Downgraded',
       });
     }
 
     const startDate = new Date();
-    const expiresAt = new Date();
+    const expiresAt = new Date(startDate);
     expiresAt.setMonth(expiresAt.getMonth() + 1);
 
-    return this.prisma.subscription.create({
-      data: {
-        userId,
-        planId: plan.id,
-        startDate,
-        expiresAt,
-        remainingJobCredits: plan.jobCredits,
-        remainingAiCredits: plan.aiCredits,
-        remainingResumeCredits: plan.resumeCredits,
-        remainingAtsCredits: plan.atsCredits,
-        status: SubscriptionStatus.ACTIVE,
-      },
-    });
+    const created = await this.subscriptionModel.create({
+      userId,
+      planId: plan.id,
+      startDate,
+      expiresAt,
+      remainingJobCredits: plan.jobCredits ?? 0,
+      remainingAiCredits: plan.aiCredits ?? 0,
+      remainingResumeCredits: plan.resumeCredits ?? 0,
+      remainingAtsCredits: plan.atsCredits ?? 0,
+      status: 'ACTIVE',
+    } as any);
+
+    return { ...created.toObject(), plan };
   }
 
   async cancel(userId: string, dto: CancelSubscriptionDto) {
-    const sub = await this.prisma.subscription.findFirst({
-      where: {
-        userId,
-        status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL] },
-      },
+    const sub = await this.subscriptionModel.findOne({
+      userId,
+      status: { $in: ['ACTIVE', 'TRIAL'] },
     });
 
     if (!sub) throw new BadRequestException('No active subscription to cancel');
 
-    return this.prisma.subscription.update({
-      where: { id: sub.id },
-      data: {
-        autoRenew: false,
-        status: SubscriptionStatus.CANCELLED,
-        cancelledAt: new Date(),
-        cancellationReason: dto.reason,
-      },
-    });
+    const updated = await this.subscriptionModel.findByIdAndUpdate(sub._id, {
+      autoRenew: false,
+      status: 'CANCELLED',
+      cancelledAt: new Date(),
+      cancellationReason: dto.reason,
+    }, { new: true }).lean();
+
+    return updated;
   }
 
   async renew(userId: string) {
-    const sub = await this.prisma.subscription.findFirst({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      include: { plan: true },
-    });
+    const sub = await this.subscriptionModel.findOne({ userId }).sort({ createdAt: -1 }).lean();
 
     if (!sub) throw new BadRequestException('No subscription to renew');
 
+    const plan = await this.planModel.findOne({ id: sub.planId }).lean();
+    if (!plan) throw new BadRequestException('Plan not found for renewal');
+
     const startDate = new Date();
-    const expiresAt = new Date();
+    const expiresAt = new Date(startDate);
     expiresAt.setMonth(expiresAt.getMonth() + 1);
 
-    // Creates a new cycle
-    return this.prisma.subscription.create({
-      data: {
-        userId,
-        planId: sub.planId,
-        startDate,
-        expiresAt,
-        remainingJobCredits: sub.plan.jobCredits,
-        remainingAiCredits: sub.plan.aiCredits,
-        remainingResumeCredits: sub.plan.resumeCredits,
-        remainingAtsCredits: sub.plan.atsCredits,
-        status: SubscriptionStatus.ACTIVE,
-      },
-    });
+    const created = await this.subscriptionModel.create({
+      userId,
+      planId: sub.planId,
+      startDate,
+      expiresAt,
+      remainingJobCredits: plan.jobCredits ?? 0,
+      remainingAiCredits: plan.aiCredits ?? 0,
+      remainingResumeCredits: plan.resumeCredits ?? 0,
+      remainingAtsCredits: plan.atsCredits ?? 0,
+      status: 'ACTIVE',
+    } as any);
+
+    return created;
   }
 }

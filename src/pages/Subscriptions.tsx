@@ -1,227 +1,241 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/store/authStore';
-import { APP_METADATA, PRICING_PLANS } from '@/config/appConfig';
 import { toast } from '@/store/toastStore';
+import { plansApi, subscriptionsApi } from '@/services/api/apiClient';
+import RazorpayCheckout from '@/components/ui/RazorpayCheckout';
 
 export default function Subscriptions() {
   const { profile } = useAuthStore();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [currentSubscription, setCurrentSubscription] = useState<any | null>(null);
 
-  // Compute dates based on registration date (or fallback to today)
-  const registrationDate = profile?.created_at ? new Date(profile.created_at) : new Date();
-  
-  // Format dates: e.g. July 23, 2026
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [plansRes, subRes] = await Promise.allSettled([plansApi.getPublic(), subscriptionsApi.getCurrent()]);
+      if (plansRes.status === 'fulfilled') setPlans(Array.isArray(plansRes.value) ? plansRes.value : []);
+      if (subRes.status === 'fulfilled') setCurrentSubscription(subRes.value || null);
+    } catch (error: any) {
+      console.warn('[Subscriptions] load failed', error);
+      setPlans([]);
+      setCurrentSubscription(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const activePlan = useMemo(() => {
+    if (!currentSubscription) return null;
+    return currentSubscription.plan || plans.find((plan) => plan.id === currentSubscription.planId) || null;
+  }, [currentSubscription, plans]);
+
+  const formatDate = (value?: string | Date | null) => {
+    if (!value) return 'Not available';
+    return new Date(value).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     });
   };
 
-  // Expiration is exactly 1 month after purchase
-  const expirationDate = new Date(registrationDate);
-  expirationDate.setMonth(expirationDate.getMonth() + 1);
-
-  // Determine active plan dynamically from user's registration data (Student -> Professional, Fresher -> Premium, Professional -> Elite)
-  const getActivePlan = () => {
-    const type = profile?.account_type || 'Fresher';
-    if (type === 'Student') {
-      return PRICING_PLANS.find((p) => p.id === 'professional') || PRICING_PLANS[0];
-    } else if (type === 'Professional') {
-      return PRICING_PLANS.find((p) => p.id === 'elite') || PRICING_PLANS[2];
-    } else {
-      return PRICING_PLANS.find((p) => p.id === 'premium') || PRICING_PLANS[1];
-    }
+  const handlePaymentSuccess = async () => {
+    await loadData();
+    toast.success('Subscription activated successfully.', 'Payment Successful');
   };
 
-  const activePlan = getActivePlan();
-  const planName = `${activePlan.name} Plan`;
-  const planPrice = activePlan.price;
-
-  const handleCancel = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      toast.success(
-        'Your subscription will remain active until the end of the current billing cycle.',
-        'Cancellation Request Sent'
-      );
-    }, 1000);
+  const handlePaymentError = (error: any) => {
+    toast.error(error?.message || 'Payment could not be completed.', 'Payment Failed');
   };
+
+  const normalizeFeatures = (features: any) => {
+    if (Array.isArray(features)) return features;
+    if (features && typeof features === 'object') return Object.values(features);
+    return [];
+  };
+
+  const isSubscriptionUsable = Boolean(
+    currentSubscription &&
+    currentSubscription.status === 'ACTIVE' &&
+    new Date(currentSubscription.expiresAt || 0).getTime() > Date.now(),
+  );
 
   return (
-    <div className="space-y-8 text-left max-w-4xl mx-auto">
-      
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-sans font-bold text-text-primary-light dark:text-text-primary-dark">
+    <div className="space-y-8 text-left max-w-6xl mx-auto px-4 py-6 md:px-0">
+      <div className="space-y-2">
+        <div className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-blue-700 dark:border-blue-900/70 dark:bg-blue-950/40 dark:text-blue-300">
+          Billing & plans
+        </div>
+        <h1 className="text-2xl font-sans font-bold text-text-primary-light dark:text-text-primary-dark md:text-3xl">
           Subscription Management
         </h1>
         <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1">
-          Review your current plan benefits, billing cycle, active limits, and transactions.
+          Choose a plan, complete secure Razorpay checkout, and unlock the dashboard features for your billing cycle.
         </p>
       </div>
 
-      {/* Subscription Active Panel Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Active plan overview card */}
-        <Card className="p-6 md:col-span-2 border border-border-light dark:border-border-dark bg-white dark:bg-card-dark relative overflow-hidden flex flex-col justify-between shadow-md">
-          {/* Subtle brand gradient background glow */}
-          <div className="absolute top-0 right-0 h-40 w-40 bg-gradient-to-bl from-blue-600/10 to-cyan-600/10 rounded-full filter blur-xl pointer-events-none" />
-          
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-primary dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 rounded-full">
-                Active Subscription
-              </span>
-              <span className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 font-bold bg-green-50 dark:bg-green-950/20 px-2.5 py-1 rounded-full">
-                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                Active
-              </span>
-            </div>
-
-            <h2 className="text-3xl font-extrabold text-text-primary-light dark:text-text-primary-dark">
-              {planName}
-            </h2>
-            <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1.5">
-              Automated high-velocity match queue active. Daily limits refreshed.
-            </p>
-
-            <div className="mt-6 grid grid-cols-2 gap-4 border-t border-border-light dark:border-border-dark pt-5">
-              <div>
-                <span className="text-[10px] uppercase tracking-wider text-text-secondary-light dark:text-text-secondary-dark block font-bold">
-                  Purchase Date
-                </span>
-                <span className="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark mt-1 block">
-                  {formatDate(registrationDate)}
-                </span>
-              </div>
-              
-              <div>
-                <span className="text-[10px] uppercase tracking-wider text-text-secondary-light dark:text-text-secondary-dark block font-bold">
-                  Expiration Date
-                </span>
-                <span className="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark mt-1 block">
-                  {formatDate(expirationDate)}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 pt-4 border-t border-border-light dark:border-border-dark flex items-center justify-between gap-4">
-            <div className="text-left">
-              <span className="text-2xl font-extrabold text-text-primary-light dark:text-text-primary-dark">
-                {planPrice}
-              </span>
-              <span className="text-xs text-text-secondary-light dark:text-text-secondary-dark"> / month</span>
-            </div>
-            
-            <div className="flex flex-col items-end gap-1.5">
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 border-red-200 dark:border-red-900/50"
-                onClick={handleCancel}
-                disabled={loading}
-              >
-                Cancel Subscription
-              </Button>
-              <span className="text-[10px] text-text-secondary-light dark:text-text-secondary-dark font-medium leading-none">
-                Subscription payments are non-refundable.
-              </span>
-            </div>
-          </div>
+      {loading ? (
+        <Card className="rounded-2xl border border-slate-200 bg-white/90 p-6 text-sm text-text-secondary-light dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300 shadow-lg shadow-slate-200/60 dark:shadow-none">
+          Loading plans and subscription status...
         </Card>
+      ) : isSubscriptionUsable ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="md:col-span-2">
+            <Card className="relative h-full overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/70 to-cyan-50/80 p-6 shadow-xl shadow-blue-100/60 dark:border-slate-700 dark:from-slate-900 dark:via-slate-900 dark:to-cyan-950/40 dark:shadow-none">
+              <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-blue-500/10 blur-3xl" />
+              <div className="absolute bottom-0 left-0 h-28 w-28 rounded-full bg-cyan-500/10 blur-3xl" />
 
-        {/* Benefits panel card */}
-        <Card className="p-6 border border-border-light dark:border-border-dark bg-white dark:bg-card-dark shadow-md flex flex-col justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-4">
-              Included Benefits
-            </h3>
-            
-            <ul className="space-y-3.5 text-xs text-text-secondary-light dark:text-text-secondary-dark">
-              {activePlan.features.map((feat, idx) => {
-                const isCreditsLine = feat.toLowerCase().includes('credits');
-                return (
-                  <li key={idx} className="flex items-center gap-2.5">
-                    <span className="text-green-500 font-bold">✓</span>
-                    <span className="flex items-center gap-1.5">
-                      {feat}
-                      {isCreditsLine && (
-                        <div className="group relative inline-block">
-                          <button
-                            type="button"
-                            className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors focus:outline-none cursor-help"
-                            aria-label="More information"
-                          >
-                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          </button>
-                          {/* Tooltip */}
-                          <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 rounded-lg bg-slate-900 dark:bg-slate-800 p-2 text-center text-[10px] leading-relaxed font-medium text-white shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50">
-                            Credits are used to automate applications on career portals that would otherwise require manual submission by the user.
-                            {/* Triangle arrow */}
-                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800" />
-                          </div>
-                        </div>
-                      )}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-
-          <div className="mt-6 pt-4 border-t border-border-light dark:border-border-dark">
-            <span className="text-[10px] text-text-secondary-light dark:text-text-secondary-dark block text-center font-semibold">
-              Need more limits? Contact support to upgrade your campaign limits.
-            </span>
-          </div>
-        </Card>
-
-      </div>
-
-      {/* Transaction billing history */}
-      <Card className="p-6 border border-border-light dark:border-border-dark bg-white dark:bg-card-dark shadow-md">
-        <h3 className="text-sm font-bold text-text-primary-light dark:text-text-primary-dark mb-4">
-          Billing History
-        </h3>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-text-secondary-light dark:text-text-secondary-dark">
-            <thead>
-              <tr className="border-b border-border-light dark:border-border-dark/80 text-text-primary-light dark:text-text-primary-dark font-bold">
-                <th className="py-2.5">Date</th>
-                <th className="py-2.5">Transaction ID</th>
-                <th className="py-2.5">Payment Method</th>
-                <th className="py-2.5">Amount</th>
-                <th className="py-2.5">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border-light dark:divide-border-dark/40">
-              <tr>
-                <td className="py-3">{formatDate(registrationDate)}</td>
-                <td className="py-3 font-mono">TXN-749102848-APPLY</td>
-                <td className="py-3">Visa ending in •••• 4242</td>
-                <td className="py-3 font-semibold text-text-primary-light dark:text-text-primary-dark">{planPrice}</td>
-                <td className="py-3">
-                  <span className="inline-block bg-green-50 dark:bg-green-950/20 text-green-600 dark:text-green-400 px-2 py-0.5 rounded-full font-semibold">
-                    Paid
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-5">
+                  <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300">
+                    Active Subscription
                   </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </Card>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/70">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Active
+                  </span>
+                </div>
 
+                <h2 className="text-3xl font-extrabold text-text-primary-light dark:text-text-primary-dark">
+                  {activePlan.name}
+                </h2>
+                <p className="mt-2 text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                  Your benefits are active and will remain available until the expiry date below.
+                </p>
+
+                <div className="mt-6 grid grid-cols-2 gap-4 rounded-2xl border border-slate-200 bg-white/70 p-4 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/50">
+                  <div>
+                    <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                      Start Date
+                    </span>
+                    <span className="mt-2 block text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
+                      {formatDate(currentSubscription.startDate)}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                      Expiration Date
+                    </span>
+                    <span className="mt-2 block text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
+                      {formatDate(currentSubscription.expiresAt)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative z-10 mt-8 flex items-center justify-between gap-4 border-t border-slate-200 pt-5 dark:border-slate-700">
+                <div>
+                  <span className="text-2xl font-extrabold text-text-primary-light dark:text-text-primary-dark">
+                    ₹{activePlan.monthlyPrice || 0}
+                  </span>
+                  <span className="text-xs text-text-secondary-light dark:text-text-secondary-dark"> / month</span>
+                </div>
+                <Button variant="outline" size="sm" className="text-xs rounded-xl border-slate-200 bg-white/80 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700">
+                  Manage Plan
+                </Button>
+              </div>
+            </Card>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.05 }}>
+            <Card className="h-full rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-lg shadow-slate-200/50 dark:border-slate-700 dark:bg-slate-900/80 dark:shadow-none">
+              <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400 mb-4">
+                Included Benefits
+              </h3>
+              <ul className="space-y-3.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                {normalizeFeatures(activePlan.features).map((feature: string, idx: number) => (
+                  <li key={`${feature}-${idx}`} className="flex items-center gap-2.5 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300">
+                      ✓
+                    </span>
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </motion.div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <Card className="rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-lg shadow-slate-200/50 dark:border-slate-700 dark:bg-slate-900/80 dark:shadow-none">
+            <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+              No active subscription found. Pick a plan below to complete a secure Razorpay checkout and unlock your account.
+            </p>
+          </Card>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {plans.length > 0 ? (
+              plans.map((plan, idx) => (
+                <motion.div
+                  key={plan.id}
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: idx * 0.06 }}
+                >
+                  <Card className={`relative h-full overflow-hidden rounded-3xl border p-6 shadow-xl transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl ${
+                    plan.id === 'premium'
+                      ? 'border-cyan-500 bg-gradient-to-b from-white via-cyan-50/60 to-blue-50/80 shadow-cyan-100/60 dark:border-cyan-500 dark:from-slate-900 dark:via-slate-900 dark:to-cyan-950/40 dark:shadow-none'
+                      : 'border-slate-200 bg-white/90 shadow-slate-200/50 dark:border-slate-700 dark:bg-slate-900/80 dark:shadow-none'
+                  }`}>
+                    {plan.id === 'premium' && (
+                      <div className="absolute right-4 top-4">
+                        <span className="rounded-full border border-cyan-200 bg-cyan-50 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-700 dark:border-cyan-900/60 dark:bg-cyan-950/40 dark:text-cyan-300">
+                          Popular
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="space-y-6 pt-5">
+                      <div>
+                        <h3 className="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">{plan.name}</h3>
+                        <p className="mt-1 text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                          {plan.description || 'Flexible access for your job search workflow.'}
+                        </p>
+                      </div>
+
+                      <div className="flex items-end gap-2">
+                        <span className="text-3xl font-extrabold text-text-primary-light dark:text-text-primary-dark">₹{plan.monthlyPrice || 0}</span>
+                        <span className="pb-1 text-xs text-text-secondary-light dark:text-text-secondary-dark">/ month</span>
+                      </div>
+
+                      <ul className="space-y-2.5 text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                        {normalizeFeatures(plan.features).map((feature: string, featureIdx: number) => (
+                          <li key={`${plan.id}-${featureIdx}`} className="flex items-center gap-2.5 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
+                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300">
+                              ✓
+                            </span>
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="mt-6">
+                      <RazorpayCheckout
+                        planId={plan.id}
+                        onSuccess={handlePaymentSuccess}
+                        onError={handlePaymentError}
+                      />
+                    </div>
+                  </Card>
+                </motion.div>
+              ))
+            ) : (
+              <Card className="p-6 md:col-span-3 text-sm text-text-secondary-light dark:text-text-secondary-dark rounded-2xl border border-slate-200 bg-white/90 dark:border-slate-700 dark:bg-slate-900/80">
+                No plans are available right now. Please contact support or try again later.
+              </Card>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

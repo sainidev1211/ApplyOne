@@ -3,6 +3,10 @@ import { PrismaService } from '../database/prisma.service.js';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service.js';
 import { CreditsService } from '../credits/credits.service.js';
 import { PaymentStatus, SubscriptionStatus } from '@prisma/client';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Payment } from '../payments/schemas/payment.schema.js';
+import { Subscription } from '../subscriptions/schemas/subscription.schema.js';
 
 @Injectable()
 export class WebhooksService {
@@ -12,6 +16,8 @@ export class WebhooksService {
     private readonly prisma: PrismaService,
     private readonly subscriptionsService: SubscriptionsService,
     private readonly creditsService: CreditsService,
+    @InjectModel(Payment.name) private paymentModel: Model<Payment>,
+    @InjectModel(Subscription.name) private subscriptionModel: Model<Subscription>,
   ) {}
 
   async handleStripeWebhook(body: any, signature: string) {
@@ -36,25 +42,7 @@ export class WebhooksService {
     eventType: string,
     payload: any,
   ) {
-    // 2. Idempotency Check
-    const existing = await this.prisma.webhookLog.findUnique({
-      where: { eventId },
-    });
-    if (existing) {
-      this.logger.log(`Webhook ${eventId} already processed`);
-      return { success: true, message: 'Already processed' };
-    }
-
-    // 3. Log the Webhook
-    await this.prisma.webhookLog.create({
-      data: {
-        provider,
-        eventId,
-        eventType,
-        payload,
-        status: 'PROCESSING',
-      },
-    });
+    // 2. Idempotency: use payment status/gateway info to avoid duplicate processing
 
     try {
       // 4. Handle specific events (e.g. payment success)
@@ -73,95 +61,70 @@ export class WebhooksService {
         // Find payment by gatewayOrderId (since that's what we saved when creating session)
         // If testing without real webhooks, we'll just log success.
         if (gatewayOrderId) {
-          const payment = await this.prisma.payment.findFirst({
-            where: { gatewayOrderId },
-          });
-
-          if (payment && payment.status !== PaymentStatus.SUCCESS) {
-            await this.activateSubscriptionAndPayment(
-              payment.id,
-              transactionId,
-            );
+          const payment = await this.paymentModel.findOne({ razorpayOrderId: gatewayOrderId }).lean();
+          if (payment && payment.status !== 'SUCCESS') {
+            await this.activateSubscriptionAndPayment(payment._id.toString(), transactionId);
           }
         }
       }
 
-      await this.prisma.webhookLog.update({
-        where: { eventId },
-        data: { status: 'SUCCESS' },
-      });
+      // optional: log success in Postgres webhookLog if necessary
 
       return { success: true };
     } catch (error: any) {
       this.logger.error(`Failed to process webhook ${eventId}`, error.stack);
-      await this.prisma.webhookLog.update({
-        where: { eventId },
-        data: { status: 'FAILED' },
-      });
       throw new BadRequestException('Webhook processing failed');
     }
   }
 
-  private async activateSubscriptionAndPayment(
-    paymentId: string,
-    transactionId: string,
-  ) {
-    await this.prisma.$transaction(async (tx: any) => {
-      const payment = await tx.payment.findUnique({
-        where: { id: paymentId },
-        include: { subscription: { include: { plan: true } } },
-      });
+  private async activateSubscriptionAndPayment(paymentId: string, transactionId: string) {
+    // Update Mongo payment and subscription
+    const payment = await this.paymentModel.findById(paymentId).lean();
+    if (!payment) return;
 
-      if (!payment) return;
+    if (payment.status === 'SUCCESS') return;
 
-      // Update payment
-      await tx.payment.update({
-        where: { id: payment.id },
+    const paidAt = new Date();
+    await this.paymentModel.updateOne({ _id: paymentId }, { status: 'SUCCESS', razorpayPaymentId: transactionId, paidAt, verifiedAt: new Date() });
+
+    const plan = await this.subscriptionModel.findById(payment.subscriptionId).lean();
+    const planDetails = await this.prisma.subscriptionPlan.findUnique({ where: { id: payment.planId } }).catch(() => null);
+
+    // Update subscription in Mongo
+    const credits = planDetails
+      ? { remainingAiCredits: planDetails.aiCredits, remainingJobCredits: planDetails.jobCredits, remainingResumeCredits: planDetails.resumeCredits, remainingAtsCredits: planDetails.atsCredits }
+      : {};
+
+    await this.subscriptionModel.updateOne({ _id: payment.subscriptionId }, { status: 'ACTIVE', ...credits });
+
+    // Also create invoice and creditTransaction in Postgres for reporting
+    try {
+      await this.prisma.invoice.create({
         data: {
-          status: PaymentStatus.SUCCESS,
-          transactionId,
-          paidAt: new Date(),
-        },
-      });
-
-      // Update subscription to final ACTIVE state, resetting limits to plan amounts
-      await tx.subscription.update({
-        where: { id: payment.subscriptionId },
-        data: {
-          status: SubscriptionStatus.ACTIVE,
-          remainingAiCredits: payment.subscription.plan.aiCredits,
-          remainingJobCredits: payment.subscription.plan.jobCredits,
-          remainingResumeCredits: payment.subscription.plan.resumeCredits,
-          remainingAtsCredits: payment.subscription.plan.atsCredits,
-        },
-      });
-
-      // Also create an invoice record
-      await tx.invoice.create({
-        data: {
-          paymentId: payment.id,
-          userId: payment.subscription.userId,
+          paymentId: paymentId,
+          userId: payment.userId,
           invoiceNumber: `INV-${Date.now()}`,
           amount: payment.amount,
           currency: payment.currency,
-          tax: payment.taxAmount || 0,
-          discount: payment.discountAmount || 0,
+          tax: 0,
+          discount: 0,
           status: 'PAID',
         },
       });
 
-      // Could also use CreditsService to log the addition of credits
-      await tx.creditTransaction.create({
+      await this.prisma.creditTransaction.create({
         data: {
-          userId: payment.subscription.userId,
+          userId: payment.userId,
           feature: 'Subscription Activation',
           creditsBefore: 0,
           creditsUsed: 0,
-          creditsAfter: payment.subscription.plan.aiCredits, // Simplify for log
-          reason: `Activated plan ${payment.subscription.plan.name}`,
-          referenceId: payment.id,
+          creditsAfter: planDetails?.aiCredits || 0,
+          reason: `Activated plan ${planDetails?.name || payment.planId}`,
+          referenceId: paymentId,
         },
       });
-    });
+    } catch (e) {
+      this.logger.warn('Failed to create Postgres invoice/creditTransaction', e?.message || e);
+    }
   }
 }
