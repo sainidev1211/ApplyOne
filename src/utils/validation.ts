@@ -25,9 +25,13 @@ export const signupSchema = z
     companyName: z.string().optional(),
     roleDetails: z.string().optional(),
 
-    // Step 3: Employment Preferences & Packages
-    employmentTypesText: z.string().trim().min(1, 'Enter at least one preferred employment type'),
+    // Step 3: Employment Type Selection
+    selectedEmploymentType: z.enum(['FULL_TIME', 'PART_TIME', 'INTERNSHIP']).optional(),
     lastMonthlyPackage: z.string().optional(),
+    expectedPackage: z.string().optional(),
+
+    // Deprecated fields kept for compatibility
+    employmentTypesText: z.string().optional(),
     expectedPackageFullTime: z.string().optional(),
     expectedPackagePartTime: z.string().optional(),
     expectedPackageInternship: z.string().optional(),
@@ -64,6 +68,16 @@ export const signupSchema = z
       }
     }
 
+    // If employment type is selected, validate expected package for that type
+    if (data.selectedEmploymentType) {
+      if (!data.expectedPackage || data.expectedPackage.trim() === '') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Expected package for ${data.selectedEmploymentType.replace('_', ' ').toLowerCase()} is required`,
+          path: ['expectedPackage'],
+        });
+      }
+    }
   });
 
 /**

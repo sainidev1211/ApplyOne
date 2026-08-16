@@ -11,17 +11,20 @@ import { Checkbox } from '@/components/ui/Checkbox';
 import { Button } from '@/components/ui/Button';
 import { TextArea } from '@/components/ui/TextArea';
 import { SEO } from '@/components/shared/SEO';
+import { Upload } from 'lucide-react';
 // Google auth removed; no client-side Google helpers required.
 
 export default function Signup() {
   const { signUp, loading } = useAuthStore();
   const navigate = useNavigate();
   const [resume, setResume] = useState<File | null>(null);
+  const [resumeFileName, setResumeFileName] = useState<string>('');
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { hasExperience: false, accountType: 'STUDENT', acceptDisclaimer: false },
+    defaultValues: { hasExperience: false, accountType: 'STUDENT', acceptDisclaimer: false, selectedEmploymentType: undefined },
   });
   const hasExperience = watch('hasExperience');
+  const selectedEmploymentType = watch('selectedEmploymentType');
 
   const onSubmit = async (data: SignupInput) => {
     const body = new FormData();
@@ -64,13 +67,74 @@ export default function Signup() {
             <TextArea label="Role details" error={errors.roleDetails?.message} {...register('roleDetails')} />
             <Input label="Last monthly package" type="number" error={errors.lastMonthlyPackage?.message} {...register('lastMonthlyPackage')} />
           </>}
-          <Input label="Preferred employment types" placeholder="Full-time, Part-time, Internship" error={errors.employmentTypesText?.message} {...register('employmentTypesText')} />
-          <Input label="Expected full-time monthly package" type="number" error={errors.expectedPackageFullTime?.message} {...register('expectedPackageFullTime')} />
-          <Input label="Expected part-time monthly package" type="number" error={errors.expectedPackagePartTime?.message} {...register('expectedPackagePartTime')} />
-          <Input label="Expected internship monthly package" type="number" error={errors.expectedPackageInternship?.message} {...register('expectedPackageInternship')} />
-          <div>
-            <label className="block text-sm font-medium mb-2">Resume (optional)</label>
-            <input type="file" accept=".pdf,.doc,.docx" onChange={(event) => setResume(event.target.files?.[0] ?? null)} />
+          
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark">Select Preferred Employment Type</label>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { value: 'FULL_TIME', label: 'Full Time', icon: '💼' },
+                { value: 'PART_TIME', label: 'Part Time', icon: '⏰' },
+                { value: 'INTERNSHIP', label: 'Internship', icon: '🎓' },
+              ].map((type) => (
+                <button
+                  key={type.value}
+                  type="button"
+                  onClick={() => setValue('selectedEmploymentType', type.value as any)}
+                  className={`p-3 rounded-lg border-2 transition-all flex flex-col items-center gap-2 ${
+                    selectedEmploymentType === type.value
+                      ? 'border-primary bg-primary/10 dark:border-primary dark:bg-primary/20'
+                      : 'border-border-light dark:border-border-dark hover:border-primary/50'
+                  }`}
+                >
+                  <span className="text-2xl">{type.icon}</span>
+                  <span className="text-sm font-medium">{type.label}</span>
+                </button>
+              ))}
+            </div>
+            {errors.selectedEmploymentType && (
+              <p className="text-xs text-red-500">{errors.selectedEmploymentType.message}</p>
+            )}
+          </div>
+
+          {selectedEmploymentType && (
+            <Input
+              label={`Expected ${selectedEmploymentType.replace('_', ' ').toLowerCase()} monthly package`}
+              type="number"
+              placeholder="Enter salary amount"
+              error={errors.expectedPackage?.message}
+              {...register('expectedPackage')}
+            />
+          )}
+
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark">Resume (optional)</label>
+            <div className="relative">
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  setResume(file ?? null);
+                  setResumeFileName(file?.name ?? '');
+                }}
+                className="hidden"
+                id="resume-upload"
+              />
+              <label
+                htmlFor="resume-upload"
+                className="flex items-center justify-center gap-3 p-4 border-2 border-dashed border-border-light dark:border-border-dark rounded-lg cursor-pointer hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/10 transition-all"
+              >
+                <Upload className="w-5 h-5 text-text-secondary-light dark:text-text-secondary-dark" />
+                <div className="text-left">
+                  <p className="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                    {resumeFileName || 'Click to upload resume'}
+                  </p>
+                  <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+                    PDF, DOC, or DOCX
+                  </p>
+                </div>
+              </label>
+            </div>
           </div>
         </div>
         <Checkbox label="I accept the ApplyOne platform terms and disclaimer" error={errors.acceptDisclaimer?.message} {...register('acceptDisclaimer')} />

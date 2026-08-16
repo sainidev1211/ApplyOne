@@ -1,19 +1,47 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/store/authStore';
+import { adminClient } from '@/services/api/adminClient';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { ShieldCheck, ArrowRight } from 'lucide-react';
+import { Input } from '@/components/ui/Input';
+import { toast } from '@/store/toastStore';
+import { ShieldCheck, Lock, Mail, ArrowRight } from 'lucide-react';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
+  const { signIn } = useAuthStore();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleOpenAdmin = () => {
-    navigate('/portal-access');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      toast.error('Missing credentials', 'Please enter admin ID and password.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await adminClient.seedAdmin().catch(() => {});
+
+      const result = await signIn(email.trim(), password);
+      if (result.success) {
+        toast.success('Admin Authenticated', 'Welcome to the ApplyOne Executive Portal.');
+        navigate('/portal-access');
+      } else {
+        toast.error('Authentication Failed', result.error || result.message || 'Invalid admin credentials.');
+      }
+    } catch (err: any) {
+      toast.error('Login Error', err.message || 'Unable to connect to authentication server.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden">
-      {/* Subtle Background Glows */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -41,20 +69,60 @@ export default function AdminLogin() {
               Administrator Access
             </CardTitle>
             <CardDescription className="text-slate-400 text-xs mt-1">
-              Open the management console without entering any credentials.
+              Restricted management console. Authorized company personnel only.
             </CardDescription>
           </CardHeader>
 
           <CardContent className="pt-4">
-            <div className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Admin ID / Email
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="admin@applyone.co"
+                    autoComplete="username"
+                    required
+                    className="pl-9 bg-slate-950/60 border-slate-800 text-white placeholder-slate-500 focus:border-cyan-500 focus:ring-cyan-500/20 h-11 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password"
+                    autoComplete="current-password"
+                    required
+                    className="pl-9 bg-slate-950/60 border-slate-800 text-white placeholder-slate-500 focus:border-cyan-500 focus:ring-cyan-500/20 h-11 text-sm"
+                  />
+                </div>
+              </div>
+
               <Button
-                type="button"
-                onClick={handleOpenAdmin}
-                className="w-full h-11 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-semibold shadow-lg shadow-blue-600/25 transition-all text-sm flex items-center justify-center gap-2"
+                type="submit"
+                disabled={loading}
+                className="w-full h-11 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-semibold shadow-lg shadow-blue-600/25 transition-all text-sm mt-2 flex items-center justify-center gap-2"
               >
-                Open Admin Panel <ArrowRight className="w-4 h-4" />
+                {loading ? 'Authenticating...' : (
+                  <>
+                    Sign In to Portal <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </Button>
-            </div>
+            </form>
           </CardContent>
         </Card>
       </div>
