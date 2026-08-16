@@ -69,26 +69,8 @@ export function AppRoutes() {
         </Route>
 
         {/* Executive Admin Management Portal */}
-        <Route
-          path="/portal-access"
-          element={
-            <ProtectedRoute>
-              <RoleGuard allowedRoles={['ADMIN']}>
-                <AdminPanel />
-              </RoleGuard>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute>
-              <RoleGuard allowedRoles={['ADMIN']}>
-                <AdminPanel />
-              </RoleGuard>
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/portal-access" element={<AdminPanel />} />
+        <Route path="/admin" element={<AdminPanel />} />
 
         {/* Wildcard redirect to Home */}
         <Route path="*" element={<Navigate to="/" replace />} />

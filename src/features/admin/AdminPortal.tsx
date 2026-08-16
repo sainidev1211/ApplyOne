@@ -268,6 +268,20 @@ export default function AdminPortal() {
     }
   };
 
+  const formatAdminDate = (value?: string | Date | null) => {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return date.toLocaleDateString();
+  };
+
+  const formatAdminCurrency = (amount?: number | string | null, currency = 'INR') => {
+    if (amount === null || amount === undefined || amount === '') return '—';
+    const numeric = Number(amount);
+    if (Number.isNaN(numeric)) return '—';
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency, maximumFractionDigits: 2 }).format(numeric);
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       {/* Top Executive Navigation Bar */}
@@ -639,6 +653,7 @@ export default function AdminPortal() {
                       <th className="p-3.5">Type & Role</th>
                       <th className="p-3.5">Experience & Target</th>
                       <th className="p-3.5">Resume File</th>
+                      <th className="p-3.5">Plan & Billing</th>
                       <th className="p-3.5">Status</th>
                       <th className="p-3.5 text-right">Actions</th>
                     </tr>
@@ -646,13 +661,13 @@ export default function AdminPortal() {
                   <tbody className="divide-y divide-slate-800/60">
                     {loading ? (
                       <tr>
-                        <td colSpan={7} className="text-center py-12 text-slate-500">
+                        <td colSpan={8} className="text-center py-12 text-slate-500">
                           Loading candidate data from MongoDB...
                         </td>
                       </tr>
                     ) : users.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="text-center py-12 text-slate-500">
+                        <td colSpan={8} className="text-center py-12 text-slate-500">
                           No candidate records match your search criteria.
                         </td>
                       </tr>
@@ -700,6 +715,20 @@ export default function AdminPortal() {
                               <span className="text-slate-500 text-[11px]">No resume</span>
                             )}
                           </td>
+                          <td className="p-3.5 text-slate-300">
+                            <div className="font-semibold text-white text-[11px]">
+                              {u.subscriptionInfo?.planName || u.dashboardData?.currentPlan || 'Free'}
+                            </div>
+                            <div className="text-[10px] text-cyan-300 mt-1">
+                              {formatAdminCurrency(u.subscriptionInfo?.amount ?? u.paymentInfo?.amount, u.subscriptionInfo?.currency || u.paymentInfo?.currency || 'INR')}
+                            </div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">
+                              Start: {formatAdminDate(u.subscriptionInfo?.startDate)}
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              Expiry: {formatAdminDate(u.subscriptionInfo?.expiresAt)}
+                            </div>
+                          </td>
                           <td className="p-3.5">
                             {u.isActive ? (
                               <span className="inline-flex items-center gap-1 text-emerald-400 font-medium text-[11px]">
@@ -710,6 +739,17 @@ export default function AdminPortal() {
                                 <AlertCircle className="w-3.5 h-3.5" /> Blocked
                               </span>
                             )}
+                            <div className="mt-1 text-[10px] text-slate-400">
+                              {u.paymentInfo?.status === 'SUCCESS' || u.paymentInfo?.status === 'PAID' ? (
+                                <span className="text-emerald-400">Paid via {u.paymentInfo?.method || 'DB'}</span>
+                              ) : u.paymentInfo?.status === 'PENDING' ? (
+                                <span className="text-yellow-400">Payment pending</span>
+                              ) : u.paymentInfo?.paymentId ? (
+                                <span className="text-cyan-400">Ref: {u.paymentInfo.paymentId}</span>
+                              ) : (
+                                <span className="text-slate-500">No payment data</span>
+                              )}
+                            </div>
                           </td>
                           <td className="p-3.5 text-right space-x-1.5">
                             <Button

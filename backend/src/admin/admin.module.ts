@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from '../users/schemas/user.schema.js';
+import { Payment, PaymentSchema } from '../payments/schemas/payment.schema.js';
+import { Subscription, SubscriptionSchema } from '../subscriptions/schemas/subscription.schema.js';
+import { Plan, PlanSchema } from '../plans/schemas/plan.schema.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AdminDashboardController } from './controllers/admin-dashboard.controller.js';
 import { AdminDashboardService } from './services/admin-dashboard.service.js';
@@ -15,7 +18,12 @@ import { AdminAuditService } from './services/admin-audit.service.js';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema },
+      { name: Payment.name, schema: PaymentSchema },
+      { name: Subscription.name, schema: SubscriptionSchema },
+      { name: Plan.name, schema: PlanSchema },
+    ]),
   ],
   controllers: [
     AdminDashboardController,

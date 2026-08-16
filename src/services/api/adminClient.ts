@@ -49,6 +49,24 @@ export interface AdminUser {
     customAlert?: string;
     updatedAt?: string;
   };
+  subscriptionInfo?: {
+    planName?: string;
+    startDate?: string | null;
+    expiresAt?: string | null;
+    status?: string;
+    autoRenew?: boolean;
+    amount?: number | null;
+    currency?: string;
+  };
+  paymentInfo?: {
+    status?: string;
+    amount?: number | null;
+    currency?: string;
+    paymentId?: string | null;
+    gatewayOrderId?: string | null;
+    paidAt?: string | null;
+    method?: string;
+  };
   notifications?: Array<{
     id: string;
     title: string;
