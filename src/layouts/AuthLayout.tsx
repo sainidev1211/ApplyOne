@@ -57,7 +57,7 @@ export function AuthLayout() {
 
         {/* Footer text */}
         <p className="text-center text-xs text-text-secondary-light dark:text-text-secondary-dark">
-          Secured by MongoDB-backed email and password authentication.
+          Secured by MongoDB — supports email/password & Google Sign-In.
         </p>
       </div>
     </div>

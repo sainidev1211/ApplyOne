@@ -136,25 +136,60 @@ export class UsersService {
   async getDashboard(userId: string) {
     const user = await this.getMe(userId);
     const mUser = await this.userModel.findById(userId).exec();
-    const resumeStatus = mUser && mUser.resumeFileName ? 'Active' : 'Missing';
-    const activeResume =
-      mUser && mUser.resumeFileName
+    const defaultResume = (mUser?.resumes || []).find((r: any) => r.isDefault) || mUser?.resumes?.[0];
+    const resumeStatus = defaultResume || mUser?.resumeFileName ? 'Active' : 'Missing';
+    const activeResume = defaultResume
+      ? {
+          id: defaultResume.id,
+          userId,
+          fileName: defaultResume.fileName,
+          storagePath: defaultResume.storagePath || 'database',
+          fileSize: defaultResume.fileSize,
+          mimeType: defaultResume.mimeType || 'application/pdf',
+          version: defaultResume.version || 1,
+          isDefault: defaultResume.isDefault ?? true,
+          status: defaultResume.status || 'ACTIVE',
+          atsAnalysis: defaultResume.atsAnalysis || null,
+          publicUrl: `/resume/${defaultResume.id}/download`,
+          createdAt: (defaultResume as any).createdAt || new Date().toISOString(),
+        }
+      : mUser && mUser.resumeFileName
         ? {
             id: 'resume-1',
             userId,
             fileName: mUser.resumeFileName,
-            storagePath: mUser.resumePath || '',
+            storagePath: mUser.resumePath || 'database',
             fileSize: 1000,
             mimeType: 'application/pdf',
             version: 1,
             isDefault: true,
             status: 'ACTIVE',
+            atsAnalysis: null,
+            publicUrl: '/resume',
             createdAt: new Date().toISOString(),
           }
         : null;
 
     const dbData = (mUser as any)?.dashboardData || {};
     const notifications = (mUser as any)?.notifications || [];
+
+    // Application records and admin dashboard metrics intentionally have separate
+    // responsibilities.  Never derive or overwrite the admin-entered values from
+    // application rows: existing customer records may contain manually curated data.
+    const applications: any[] = dbData.applications || [];
+    const storedMetrics = dbData.dashboardMetrics || dbData.metrics || {};
+    // Root-level fields are supported for legacy MongoDB documents without
+    // changing them. New admin writes are stored under dashboardMetrics.
+    const metric = (key: string, legacyKey: string) =>
+      storedMetrics[key] ?? dbData[legacyKey] ?? '0';
+    const dashboardMetrics = {
+      applications: metric('applications', 'applicationsCount'),
+      responses: metric('responses', 'responsesCount'),
+      interviews: metric('interviews', 'interviewCount'),
+      offers: metric('offers', 'offerCount'),
+      rejected: metric('rejected', 'rejectedCount'),
+      shortlisted: metric('shortlisted', 'shortlistedCount'),
+    };
 
     return {
       userInfo: user,
@@ -167,11 +202,18 @@ export class UsersService {
       },
       resumeStatus,
       activeResume,
-      applicationsCount: dbData.applicationsCount ?? 0,
-      interviewCount: dbData.interviewCount ?? 0,
-      offerCount: dbData.offerCount ?? 0,
+      dashboardMetrics,
+      // Compatibility aliases for existing clients. These are persisted admin
+      // values, not calculated application counts.
+      applicationsCount: dashboardMetrics.applications,
+      responsesCount: dashboardMetrics.responses,
+      interviewCount: dashboardMetrics.interviews,
+      offerCount: dashboardMetrics.offers,
+      rejectedCount: dashboardMetrics.rejected,
+      shortlistedCount: dashboardMetrics.shortlisted,
       jobsInProgress: dbData.jobsInProgress ?? 0,
       adminMessage: dbData.adminMessage || '',
+      applications, // full array for dashboard table
       recentActivity: dbData.recentActivity || [],
       notifications,
       profileCompletion: this.calculateProfileCompletion(
@@ -179,6 +221,7 @@ export class UsersService {
       ).completionPercentage,
     };
   }
+
 
   async getActivity(userId: string, query: PaginationQueryDto) {
     return {

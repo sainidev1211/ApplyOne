@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { ROUTES } from '@/config/appConfig';
 import { useTheme } from '@/design-system/ThemeProvider';
+import { subscriptionsApi, usersApi } from '@/services/api/apiClient';
 import { Container } from '@/components/ui/Container';
 import { Logo } from '@/components/shared/Logo';
 
@@ -18,6 +19,57 @@ export function DashboardLayout() {
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function checkSubAndNotifs() {
+      try {
+        const [sub, dash] = await Promise.allSettled([
+          subscriptionsApi.getCurrent(),
+          usersApi.getDashboard(),
+        ]);
+        if (sub.status === 'fulfilled' && sub.value) {
+          const s = sub.value;
+          setHasActiveSubscription(s.status === 'ACTIVE' && new Date(s.expiresAt || 0).getTime() > Date.now());
+        } else {
+          setHasActiveSubscription(false);
+        }
+        if (dash.status === 'fulfilled' && dash.value && (dash.value as any).notifications) {
+          const realNotifs = (dash.value as any).notifications.map((n: any) => ({
+            id: n.id || Math.random().toString(),
+            title: n.title,
+            description: n.message,
+            time: n.createdAt ? new Date(n.createdAt).toLocaleDateString() : 'Recent',
+            unread: !n.read,
+          }));
+          if (realNotifs.length > 0) {
+            setNotifications(realNotifs);
+          } else {
+            setNotifications([
+              {
+                id: '1',
+                title: 'Welcome to ApplyOne',
+                description: 'Your account is connected. Keep your profile and subscription up to date.',
+                time: 'Recent',
+                unread: false,
+              }
+            ]);
+          }
+        }
+      } catch {
+        setHasActiveSubscription(false);
+      }
+    }
+    checkSubAndNotifs();
+  }, []);
+
+  const unreadCount = notifications.filter((n) => n.unread).length;
+
+  const handleMarkAllRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -33,37 +85,6 @@ export function DashboardLayout() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [dropdownOpen, notificationsOpen]);
-  
-  // Mock notifications array
-  const [mockNotifications, setMockNotifications] = useState([
-    {
-      id: '1',
-      title: 'Welcome to ApplyOne!',
-      description: 'Your startup frontend foundation database synchronization is configured cleanly.',
-      time: '2m ago',
-      unread: true,
-    },
-    {
-      id: '2',
-      title: 'Resume Parse Complete',
-      description: 'Resume structure parsed successfully. ATS suitability score checks finished at 92%.',
-      time: '1h ago',
-      unread: true,
-    },
-    {
-      id: '3',
-      title: 'Theme Config Sync',
-      description: 'Local storage settings synchronized with your preference for light/dark templates.',
-      time: '3h ago',
-      unread: false,
-    },
-  ]);
-
-  const unreadCount = mockNotifications.filter((n) => n.unread).length;
-
-  const handleMarkAllRead = () => {
-    setMockNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
-  };
 
   const handleLogout = async () => {
     await signOut();
@@ -95,6 +116,7 @@ export function DashboardLayout() {
     },
     { label: 'AI Resume (Soon)', href: '#', icon: '✨', disabled: true },
     { label: 'Subscriptions', href: ROUTES.SUBSCRIPTIONS, icon: '💳' },
+    { label: 'Help & Support', href: ROUTES.SUPPORT, icon: '❓' },
     { label: 'Settings', href: ROUTES.SETTINGS, icon: '⚙️' },
   ];
 
@@ -178,11 +200,23 @@ export function DashboardLayout() {
           <div className="flex items-center space-x-3">
             {/* Theme Toggle */}
             <button
-              onClick={() => setTheme(isDark ? 'light' : 'dark')}
-              className="p-2 rounded-lg border border-border-light dark:border-border-dark text-text-secondary-light dark:text-text-secondary-dark cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-              aria-label="Toggle color theme"
+              onClick={() => {
+                if (hasActiveSubscription) {
+                  setTheme(isDark ? 'light' : 'dark');
+                }
+              }}
+              className={`p-2 rounded-lg border border-border-light dark:border-border-dark transition-colors relative ${
+                hasActiveSubscription 
+                  ? 'text-text-secondary-light dark:text-text-secondary-dark cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800' 
+                  : 'text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-50'
+              }`}
+              aria-label={hasActiveSubscription ? "Toggle color theme" : "Upgrade to use dark mode"}
+              title={hasActiveSubscription ? "" : "Theme switcher requires an active subscription"}
             >
               {isDark ? '☀️' : '🌙'}
+              {!hasActiveSubscription && (
+                <span className="absolute -top-1 -right-1 text-[10px]">🔒</span>
+              )}
             </button>
 
             {/* Notification Menu */}
@@ -219,24 +253,30 @@ export function DashboardLayout() {
                       )}
                     </div>
                     <div className="max-h-64 overflow-y-auto divide-y divide-border-light dark:divide-border-dark/60">
-                      {mockNotifications.map((notif) => (
-                        <div
-                          key={notif.id}
-                          className={`p-3.5 text-left text-xs transition-colors hover:bg-bg-alt-light dark:hover:bg-bg-alt-dark ${
-                            notif.unread ? 'bg-blue-50/20 dark:bg-blue-950/10' : ''
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <span className={`font-semibold ${notif.unread ? 'text-text-primary-light dark:text-text-primary-dark' : 'text-text-secondary-light dark:text-text-secondary-dark'}`}>
-                              {notif.title}
-                            </span>
-                            <span className="text-[10px] text-slate-400 whitespace-nowrap">{notif.time}</span>
+                      {notifications.length > 0 ? (
+                        notifications.map((notif) => (
+                          <div
+                            key={notif.id}
+                            className={`p-3.5 text-left text-xs transition-colors hover:bg-bg-alt-light dark:hover:bg-bg-alt-dark ${
+                              notif.unread ? 'bg-blue-50/20 dark:bg-blue-950/10' : ''
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <span className={`font-semibold ${notif.unread ? 'text-text-primary-light dark:text-text-primary-dark' : 'text-text-secondary-light dark:text-text-secondary-dark'}`}>
+                                {notif.title}
+                              </span>
+                              <span className="text-[10px] text-slate-400 whitespace-nowrap">{notif.time}</span>
+                            </div>
+                            <p className="text-text-secondary-light dark:text-text-secondary-dark mt-1 leading-relaxed">
+                              {notif.description}
+                            </p>
                           </div>
-                          <p className="text-text-secondary-light dark:text-text-secondary-dark mt-1 leading-relaxed">
-                            {notif.description}
-                          </p>
+                        ))
+                      ) : (
+                        <div className="p-4 text-center text-xs text-slate-400">
+                          No notifications yet
                         </div>
-                      ))}
+                      )}
                     </div>
                   </motion.div>
                 )}

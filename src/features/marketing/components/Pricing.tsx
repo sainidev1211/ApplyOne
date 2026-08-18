@@ -77,7 +77,7 @@ export function Pricing() {
             </div>
           ) : (
             plans.map((plan, idx) => {
-              const isPopular = plan.id === 'premium';
+              const isPopular = plan.id === 'elite' || plan.monthlyPrice === 1499;
               const features = normalizeFeatures(plan.features);
 
               return (

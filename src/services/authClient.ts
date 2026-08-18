@@ -79,34 +79,107 @@ async function request(path: string, init: RequestInit): Promise<any> {
 }
 
 export const authClient = {
-  async signIn(email: string, password: string): Promise<ServiceResponse<AuthSession>> {
+  async signIn(email: string, password: string): Promise<ServiceResponse<AuthSession & { needsProfileCompletion?: boolean }>> {
     try {
       const payload = await request('/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      return { success: true, data: toAuthSession(payload), error: null, message: 'Signed in successfully.' };
+      const session = toAuthSession(payload);
+      return {
+        success: true,
+        data: { ...session, needsProfileCompletion: payload.needsProfileCompletion },
+        error: null,
+        message: 'Signed in successfully.',
+      };
     } catch (error: any) {
       return { success: false, data: null, error: error.message, message: error.message };
     }
   },
 
-  async signUp(formData: FormData): Promise<ServiceResponse<AuthSession>> {
+  async signUp(formData: FormData): Promise<ServiceResponse<AuthSession & { needsProfileCompletion?: boolean }>> {
     try {
       const payload = await request('/auth/signup', { method: 'POST', body: formData });
-      return { success: true, data: toAuthSession(payload), error: null, message: 'Account created successfully.' };
+      const session = toAuthSession(payload);
+      return {
+        success: true,
+        data: { ...session, needsProfileCompletion: payload.needsProfileCompletion },
+        error: null,
+        message: 'Account created successfully.',
+      };
     } catch (error: any) {
       return { success: false, data: null, error: error.message, message: error.message };
     }
   },
 
-  // Google signup/login disabled — no-op placeholders kept for backward compatibility.
-  async startGoogleSignup(_formData: FormData): Promise<ServiceResponse<{ authorizationUrl: string }>> {
-    return { success: false, data: null, error: 'Google signup disabled', message: 'Google signup disabled' };
+  async googleAuth(credential: string): Promise<ServiceResponse<AuthSession & { needsProfileCompletion?: boolean }>> {
+    try {
+      const payload = await request('/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential }),
+      });
+      const session = toAuthSession(payload);
+      return {
+        success: true,
+        data: { ...session, needsProfileCompletion: payload.needsProfileCompletion },
+        error: null,
+        message: 'Authenticated with Google.',
+      };
+    } catch (error: any) {
+      return { success: false, data: null, error: error.message, message: error.message };
+    }
   },
-  startGoogleLogin(): void {
-    // noop
+
+  async completeProfile(formData: FormData): Promise<ServiceResponse<AuthSession>> {
+    try {
+      const stored = getStoredSession();
+      const payload = await request('/auth/complete-profile', {
+        method: 'POST',
+        headers: stored?.token ? { Authorization: `Bearer ${stored.token}` } : undefined,
+        body: formData,
+      });
+      return { success: true, data: toAuthSession(payload), error: null, message: 'Profile completed.' };
+    } catch (error: any) {
+      return { success: false, data: null, error: error.message, message: error.message };
+    }
+  },
+
+  async forgotPassword(email: string): Promise<ServiceResponse<{ isGoogleOnly?: boolean }>> {
+    try {
+      const payload = await request('/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      return {
+        success: true,
+        data: payload,
+        error: null,
+        message: payload.message || 'Recovery email sent if account exists.',
+      };
+    } catch (error: any) {
+      return { success: false, data: null, error: error.message, message: error.message };
+    }
+  },
+
+  async resetPassword(token: string, newPassword: string): Promise<ServiceResponse<any>> {
+    try {
+      const payload = await request('/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword }),
+      });
+      return {
+        success: true,
+        data: payload,
+        error: null,
+        message: payload.message || 'Password reset successfully.',
+      };
+    } catch (error: any) {
+      return { success: false, data: null, error: error.message, message: error.message };
+    }
   },
 
   async getCurrentUser(): Promise<ServiceResponse<StoredUser>> {

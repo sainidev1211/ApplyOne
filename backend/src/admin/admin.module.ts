@@ -15,6 +15,8 @@ import { AdminSettingsController } from './controllers/admin-settings.controller
 import { AdminSettingsService } from './services/admin-settings.service.js';
 import { AdminAuditController } from './controllers/admin-audit.controller.js';
 import { AdminAuditService } from './services/admin-audit.service.js';
+import { AdminSubscriptionsController } from './controllers/admin-subscriptions.controller.js';
+import { AdminSubscriptionsService } from './services/admin-subscriptions.service.js';
 
 @Module({
   imports: [
@@ -31,6 +33,7 @@ import { AdminAuditService } from './services/admin-audit.service.js';
     AdminEmployeesController,
     AdminSettingsController,
     AdminAuditController,
+    AdminSubscriptionsController,
   ],
   providers: [
     PrismaService,
@@ -39,6 +42,7 @@ import { AdminAuditService } from './services/admin-audit.service.js';
     AdminEmployeesService,
     AdminSettingsService,
     AdminAuditService,
+    AdminSubscriptionsService,
   ],
   exports: [AdminUsersService, AdminDashboardService],
 })

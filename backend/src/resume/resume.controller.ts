@@ -61,10 +61,16 @@ export class ResumeController {
   @Get(':id/download')
   @ApiOperation({ summary: 'Download the authenticated user resume' })
   async downloadResume(@Request() req: any, @Param('id') id: string, @Res() res: Response) {
-    const { resume, filePath } = await this.resumeService.getDownload(req.user.id, id);
-    res.setHeader('Content-Type', resume.mimeType);
-    res.setHeader('Content-Disposition', `attachment; filename="${String(resume.fileName).replace(/"/g, '')}"`);
-    return res.sendFile(filePath, { root: process.cwd() });
+    const { resume, buffer, filePath } = await this.resumeService.getDownload(req.user.id, id);
+    res.setHeader('Content-Type', resume.mimeType || 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(resume.fileName || 'resume.pdf')}"`);
+    if (buffer) {
+      return res.send(buffer);
+    }
+    if (filePath) {
+      return res.sendFile(filePath, { root: process.cwd() });
+    }
+    return res.status(404).send('Resume file is unavailable');
   }
 
   @Patch(':id/default')

@@ -31,11 +31,23 @@ export class ResumeService {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ];
     if (!allowedMimeTypes.includes(file.mimetype)) {
-      // Remove the uploaded file if it failed validation here
-      fs.unlinkSync(file.path);
+      if (file.path && fs.existsSync(file.path)) {
+        try { fs.unlinkSync(file.path); } catch {}
+      }
       throw new BadRequestException(
         'Invalid file format. Only PDF and Word documents are allowed.',
       );
+    }
+
+    // Read the binary file data into a Buffer to store in the database
+    let fileBuffer: Buffer;
+    if (file.buffer) {
+      fileBuffer = file.buffer;
+    } else if (file.path && fs.existsSync(file.path)) {
+      fileBuffer = fs.readFileSync(file.path);
+      try { fs.unlinkSync(file.path); } catch {}
+    } else {
+      throw new BadRequestException('Unable to read uploaded file buffer.');
     }
 
     const user = await this.userModel.findById(userId).exec();
@@ -44,26 +56,68 @@ export class ResumeService {
     const version = Math.max(0, ...resumes.map((item) => item.version || 0)) + 1;
     // Uploading is a replacement: only one current resume is used by ATS.
     resumes.forEach((item) => { item.isDefault = false; item.status = 'ARCHIVED'; });
-    const resume = { id: randomUUID(), userId, fileName: file.originalname, storagePath: `uploads/${file.filename}`,
-      publicUrl: '', fileSize: file.size, mimeType: file.mimetype, version,
-      isDefault: true, status: 'ACTIVE', createdAt: new Date(), updatedAt: new Date() };
-    // Use one stable id in metadata and URL.
+    
+    const resume = {
+      id: randomUUID(),
+      userId,
+      fileName: file.originalname,
+      storagePath: 'database',
+      fileData: fileBuffer,
+      publicUrl: '',
+      fileSize: file.size || fileBuffer.length,
+      mimeType: file.mimetype,
+      version,
+      isDefault: true,
+      status: 'ACTIVE',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
     resume.publicUrl = `/resume/${resume.id}/download`;
     resumes.push(resume);
     user.resumes = resumes as any;
     user.resumeFileName = file.originalname;
     user.resumePath = resume.storagePath;
     await user.save();
-    return resume;
+
+    // Return clean metadata without the large binary buffer in JSON
+    return {
+      id: resume.id,
+      userId,
+      fileName: resume.fileName,
+      storagePath: resume.storagePath,
+      fileSize: resume.fileSize,
+      mimeType: resume.mimeType,
+      version: resume.version,
+      isDefault: resume.isDefault,
+      status: resume.status,
+      publicUrl: resume.publicUrl,
+      createdAt: resume.createdAt,
+      updatedAt: resume.updatedAt,
+    };
   }
 
   async getAllResumes(userId: string) {
     const user = await this.userModel.findById(userId).lean().exec();
-    return (user?.resumes || []).map((resume: any) => ({ ...resume, userId, publicUrl: `/resume/${resume.id}/download` })).sort((a: any, b: any) => b.version - a.version);
+    return (user?.resumes || [])
+      .map((resume: any) => ({
+        id: resume.id,
+        userId,
+        fileName: resume.fileName,
+        storagePath: resume.storagePath || 'database',
+        fileSize: resume.fileSize,
+        mimeType: resume.mimeType,
+        version: resume.version || 1,
+        isDefault: Boolean(resume.isDefault),
+        status: resume.status || 'ACTIVE',
+        atsAnalysis: resume.atsAnalysis || null,
+        publicUrl: `/resume/${resume.id}/download`,
+        createdAt: resume.createdAt,
+        updatedAt: resume.updatedAt,
+      }))
+      .sort((a: any, b: any) => b.version - a.version);
   }
 
   async getResumeHistory(userId: string) {
-    // Alias for getAllResumes in this case
     return this.getAllResumes(userId);
   }
 
@@ -73,7 +127,21 @@ export class ResumeService {
     if (!user || !resume) throw new NotFoundException('Resume not found');
     if (dto.isDefault) user.resumes.forEach((item: any) => { item.isDefault = item.id === id; });
     await user.save();
-    return { ...(resume.toObject?.() || resume), userId, publicUrl: `/resume/${id}/download` };
+    return {
+      id: resume.id,
+      userId,
+      fileName: resume.fileName,
+      storagePath: resume.storagePath || 'database',
+      fileSize: resume.fileSize,
+      mimeType: resume.mimeType,
+      version: resume.version,
+      isDefault: resume.isDefault,
+      status: resume.status,
+      atsAnalysis: resume.atsAnalysis || null,
+      publicUrl: `/resume/${id}/download`,
+      createdAt: resume.createdAt,
+      updatedAt: resume.updatedAt,
+    };
   }
 
   async deleteResume(userId: string, id: string) {
@@ -81,21 +149,22 @@ export class ResumeService {
     const resume: any = user?.resumes?.find((item: any) => item.id === id);
     if (!user || !resume) throw new NotFoundException('Resume not found');
 
-    // Physical deletion
-    const uploadDir = this.configService.get<string>(
-      'app.uploadPath',
-      './uploads',
-    );
-    const filename = path.basename(resume.storagePath);
-    const fullPath = path.join(uploadDir, filename);
+    // Physical deletion if legacy file on disk
+    if (resume.storagePath && resume.storagePath !== 'database') {
+      const uploadDir = this.configService.get<string>(
+        'app.uploadPath',
+        './uploads',
+      );
+      const filename = path.basename(resume.storagePath);
+      const fullPath = path.join(uploadDir, filename);
 
-    try {
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
+      try {
+        if (fs.existsSync(fullPath)) {
+          fs.unlinkSync(fullPath);
+        }
+      } catch (error) {
+        console.error(`Failed to delete legacy file ${fullPath}`, error);
       }
-    } catch (error) {
-      console.error(`Failed to delete file ${fullPath}`, error);
-      // We continue with DB deletion even if file deletion fails
     }
 
     // DB deletion
@@ -104,7 +173,7 @@ export class ResumeService {
     if (resume.isDefault && remaining.length) remaining.sort((a, b) => b.version - a.version)[0].isDefault = true;
     const current: any = remaining.find((item) => item.isDefault);
     user.resumeFileName = current?.fileName;
-    user.resumePath = current?.storagePath;
+    user.resumePath = current?.storagePath || (current ? 'database' : undefined);
     await user.save();
 
     return { message: 'Resume deleted successfully' };
@@ -114,9 +183,24 @@ export class ResumeService {
     const user = await this.userModel.findById(userId).lean().exec();
     const resume: any = user?.resumes?.find((item: any) => item.id === id);
     if (!resume) throw new NotFoundException('Resume not found');
-    const uploadDir = this.configService.get<string>('app.uploadPath', './uploads');
-    const filePath = path.join(uploadDir, path.basename(resume.storagePath));
-    if (!fs.existsSync(filePath)) throw new NotFoundException('Resume file is unavailable');
-    return { resume, filePath };
+
+    // 1. Return buffer stored directly in database
+    if (resume.fileData) {
+      const buffer = Buffer.isBuffer(resume.fileData)
+        ? resume.fileData
+        : Buffer.from(resume.fileData.buffer || resume.fileData);
+      return { resume, buffer, filePath: null };
+    }
+
+    // 2. Legacy fallback: check disk if storagePath exists
+    if (resume.storagePath && resume.storagePath !== 'database') {
+      const uploadDir = this.configService.get<string>('app.uploadPath', './uploads');
+      const filePath = path.join(uploadDir, path.basename(resume.storagePath));
+      if (fs.existsSync(filePath)) {
+        return { resume, buffer: null, filePath };
+      }
+    }
+
+    throw new NotFoundException('Resume file is unavailable');
   }
 }

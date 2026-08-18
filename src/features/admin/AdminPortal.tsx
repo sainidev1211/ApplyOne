@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { adminClient, AdminUser, AdminDashboardMetrics } from '@/services/api/adminClient';
+import { adminClient, AdminUser, AdminDashboardMetrics, AdminApplication } from '@/services/api/adminClient';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -33,9 +33,14 @@ import {
   ExternalLink,
   ChevronRight,
   TrendingUp,
+  Plus,
+  Upload,
+  Archive,
 } from 'lucide-react';
 
-type AdminTab = 'overview' | 'users' | 'edit-user' | 'push-dashboard' | 'notifications';
+type AdminTab = 'overview' | 'users' | 'edit-user' | 'push-dashboard' | 'applications' | 'notifications';
+
+const APPLICATION_STATUSES = ['Preparing', 'Applied', 'Under Review', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer', 'Accepted', 'Rejected', 'Withdrawn'];
 
 export default function AdminPortal() {
   const { profile, signOut } = useAuthStore();
@@ -55,6 +60,13 @@ export default function AdminPortal() {
 
   // Selected user for editing & dashboard pushing
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [managedApplications, setManagedApplications] = useState<AdminApplication[]>([]);
+  const [applicationSearch, setApplicationSearch] = useState('');
+  const [applicationStatusFilter, setApplicationStatusFilter] = useState('ALL');
+  const [applicationSaving, setApplicationSaving] = useState(false);
+  const [editingApplicationId, setEditingApplicationId] = useState<string | null>(null);
+  const blankApplication = () => ({ jobTitle: '', company: '', location: '', jobType: 'Full-time', jobUrl: '', jobReference: '', salary: '', status: 'Applied', appliedDate: new Date().toISOString().slice(0, 10), source: 'ApplyOne', campaign: '', notes: '', recruiterContact: '' });
+  const [applicationForm, setApplicationForm] = useState(blankApplication);
 
   // Form State for User Editor
   const [editFormData, setEditFormData] = useState({
@@ -83,11 +95,14 @@ export default function AdminPortal() {
     aiCredits: 5,
     resumeCredits: 3,
     atsCredits: 5,
-    applicationsCount: 0,
-    interviewCount: 0,
-    offerCount: 0,
     jobsInProgress: 0,
     adminMessage: '',
+    applications: '0',
+    responses: '0',
+    interviews: '0',
+    offers: '0',
+    rejected: '0',
+    shortlisted: '0',
   });
 
   // Form State for Notification Broadcaster
@@ -135,7 +150,16 @@ export default function AdminPortal() {
   }, [fetchMetrics, fetchUsers]);
 
   // Select user and populate edit & dashboard form
-  const handleSelectUser = (user: AdminUser, targetTab: 'edit-user' | 'push-dashboard' = 'edit-user') => {
+  const fetchManagedApplications = useCallback(async (userId: string) => {
+    try {
+      const res = await adminClient.getApplications(userId, { search: applicationSearch, status: applicationStatusFilter !== 'ALL' ? applicationStatusFilter : undefined, limit: 100 });
+      setManagedApplications(res.items);
+    } catch (err: any) {
+      toast.error('Unable to load applications', err.message);
+    }
+  }, [applicationSearch, applicationStatusFilter]);
+
+  const handleSelectUser = (user: AdminUser, targetTab: 'edit-user' | 'push-dashboard' | 'applications' = 'edit-user') => {
     setSelectedUser(user);
     setEditFormData({
       fullName: user.fullName || '',
@@ -158,21 +182,87 @@ export default function AdminPortal() {
 
     const db = user.dashboardData || {};
     const creds = db.remainingCredits || {};
+    const storedMetrics = db.dashboardMetrics || {};
     setDashboardPushData({
       currentPlan: db.currentPlan || 'Free',
       jobCredits: creds.job ?? 10,
       aiCredits: creds.ai ?? 5,
       resumeCredits: creds.resume ?? 3,
       atsCredits: creds.ats ?? 5,
-      applicationsCount: db.applicationsCount ?? 0,
-      interviewCount: db.interviewCount ?? 0,
-      offerCount: db.offerCount ?? 0,
       jobsInProgress: db.jobsInProgress ?? 0,
       adminMessage: db.adminMessage || '',
+      applications: String(storedMetrics.applications ?? db.applicationsCount ?? '0'),
+      responses: String(storedMetrics.responses ?? '0'),
+      interviews: String(storedMetrics.interviews ?? db.interviewCount ?? '0'),
+      offers: String(storedMetrics.offers ?? db.offerCount ?? '0'),
+      rejected: String(storedMetrics.rejected ?? '0'),
+      shortlisted: String(storedMetrics.shortlisted ?? '0'),
     });
 
     setTargetUserId(user.id);
     setActiveTab(targetTab);
+    if (targetTab === 'applications') void fetchManagedApplications(user.id);
+  };
+
+  useEffect(() => {
+    if (activeTab === 'applications' && selectedUser) void fetchManagedApplications(selectedUser.id);
+  }, [activeTab, selectedUser?.id, fetchManagedApplications]);
+
+  const saveApplication = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selectedUser) return;
+    if (!applicationForm.jobTitle.trim() || !applicationForm.company.trim() || !applicationForm.status || !applicationForm.appliedDate) {
+      toast.error('Missing required fields', 'User, job title, company, status, and applied date are required.');
+      return;
+    }
+    setApplicationSaving(true);
+    try {
+      if (editingApplicationId) {
+        await adminClient.updateApplication(selectedUser.id, editingApplicationId, applicationForm);
+        toast.success('Application updated successfully');
+      } else {
+        await adminClient.createApplication(selectedUser.id, applicationForm);
+        toast.success('Application added successfully');
+      }
+      setApplicationForm(blankApplication());
+      setEditingApplicationId(null);
+      await fetchManagedApplications(selectedUser.id);
+      await fetchUsers();
+    } catch (err: any) {
+      toast.error('Unable to save application', err.message);
+    } finally { setApplicationSaving(false); }
+  };
+
+  const editApplication = (application: AdminApplication) => {
+    setEditingApplicationId(application.id);
+    setApplicationForm({ ...blankApplication(), ...application, appliedDate: application.appliedDate?.slice(0, 10) || new Date().toISOString().slice(0, 10) });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const archiveApplication = async (application: AdminApplication) => {
+    if (!selectedUser || !window.confirm(`Archive ${application.jobTitle} at ${application.company}? This cannot be undone.`)) return;
+    try {
+      await adminClient.deleteApplication(selectedUser.id, application.id);
+      toast.success('Application archived');
+      await fetchManagedApplications(selectedUser.id);
+    } catch (err: any) { toast.error('Unable to archive application', err.message); }
+  };
+
+  const importCsv = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedUser) return;
+    const text = await file.text();
+    const [header, ...rows] = text.trim().split(/\r?\n/);
+    const columns = header.split(',').map((value) => value.trim());
+    const applications = rows.filter(Boolean).map((row) => Object.fromEntries(row.split(',').map((value, index) => [columns[index], value.trim()])));
+    if (!applications.length) { toast.error('No importable rows found'); return; }
+    setApplicationSaving(true);
+    try {
+      const result = await adminClient.bulkCreateApplications(selectedUser.id, applications);
+      toast.success(`${result.created} applications imported`, result.skipped ? `${result.skipped} incomplete rows skipped.` : undefined);
+      await fetchManagedApplications(selectedUser.id);
+    } catch (err: any) { toast.error('CSV import failed', err.message); }
+    finally { setApplicationSaving(false); event.target.value = ''; }
   };
 
   // Submit User Profile Updates
@@ -209,11 +299,16 @@ export default function AdminPortal() {
           resume: Number(dashboardPushData.resumeCredits),
           ats: Number(dashboardPushData.atsCredits),
         },
-        applicationsCount: Number(dashboardPushData.applicationsCount),
-        interviewCount: Number(dashboardPushData.interviewCount),
-        offerCount: Number(dashboardPushData.offerCount),
         jobsInProgress: Number(dashboardPushData.jobsInProgress),
         adminMessage: dashboardPushData.adminMessage.trim(),
+        dashboardMetrics: {
+          applications: dashboardPushData.applications,
+          responses: dashboardPushData.responses,
+          interviews: dashboardPushData.interviews,
+          offers: dashboardPushData.offers,
+          rejected: dashboardPushData.rejected,
+          shortlisted: dashboardPushData.shortlisted,
+        },
       });
 
       toast.success('Dashboard Pushed', `User ${selectedUser.email}'s dashboard has been updated live in MongoDB.`);
@@ -354,6 +449,17 @@ export default function AdminPortal() {
             <Sliders className="w-3.5 h-3.5" /> Push to Dashboard
           </button>
           <button
+            onClick={() => {
+              if (!selectedUser && users.length > 0) handleSelectUser(users[0], 'applications');
+              else setActiveTab('applications');
+            }}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              activeTab === 'applications' ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Briefcase className="w-3.5 h-3.5" /> Applications
+          </button>
+          <button
             onClick={() => setActiveTab('notifications')}
             className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
               activeTab === 'notifications'
@@ -477,6 +583,15 @@ export default function AdminPortal() {
                   </div>
                 </CardContent>
               </Card>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                ['Active Subscribers', metrics?.overview.activeSubscribers ?? 0, 'text-emerald-400'],
+                ['Applications Submitted', metrics?.overview.applicationsSubmitted ?? 0, 'text-blue-400'],
+                ['Interviews', metrics?.overview.interviews ?? 0, 'text-orange-400'],
+                ['Offers', metrics?.overview.offers ?? 0, 'text-purple-400'],
+              ].map(([label, value, color]) => <Card key={String(label)} className="bg-slate-900/80 border-slate-800"><CardContent className="p-4"><p className="text-[11px] uppercase tracking-wider font-semibold text-slate-400">{label}</p><p className={`mt-1 text-2xl font-extrabold ${color}`}>{Number(value).toLocaleString()}</p><p className="mt-1 text-[11px] text-slate-500">Derived from persisted records</p></CardContent></Card>)}
             </div>
 
             {/* Quick Actions & Recent Users */}
@@ -701,9 +816,9 @@ export default function AdminPortal() {
                             </div>
                           </td>
                           <td className="p-3.5">
-                            {u.resumePath ? (
+                            {u.resumePath || u.resumeFileName || (u.resumesCount ?? 0) > 0 ? (
                               <a
-                                href={adminClient.getResumeDownloadUrl(u.resumePath)}
+                                href={adminClient.getResumeDownloadUrl(u.resumePath, u.id)}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="inline-flex items-center gap-1.5 bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-800/80 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors"
@@ -839,14 +954,14 @@ export default function AdminPortal() {
                         </div>
                       </div>
 
-                      {selectedUser.resumePath && (
+                      {(selectedUser.resumePath || selectedUser.resumeFileName || (selectedUser.resumes?.length ?? 0) > 0) && (
                         <a
-                          href={adminClient.getResumeDownloadUrl(selectedUser.resumePath)}
+                          href={adminClient.getResumeDownloadUrl(selectedUser.resumePath, selectedUser.id)}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center gap-1.5 bg-cyan-950 hover:bg-cyan-900 border border-cyan-800 text-cyan-300 text-xs px-3 py-1.5 rounded-lg font-medium"
                         >
-                          <Download className="w-4 h-4" /> Download Resume ({selectedUser.resumeFileName})
+                          <Download className="w-4 h-4" /> Download Resume ({selectedUser.resumeFileName || 'Candidate Resume'})
                         </a>
                       )}
                     </div>
@@ -1188,39 +1303,30 @@ export default function AdminPortal() {
                       </div>
                     </div>
 
-                    {/* Application Stats */}
                     <div className="border-t border-slate-800/80 pt-5">
-                      <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">
-                        Dashboard Metrics & Counters
-                      </label>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        <div>
-                          <label className="block text-xs text-slate-400 mb-1">Applications Dispatched</label>
-                          <Input
-                            type="number"
-                            value={dashboardPushData.applicationsCount}
-                            onChange={(e) => setDashboardPushData({ ...dashboardPushData, applicationsCount: Number(e.target.value) })}
-                            className="bg-slate-950 border-slate-800 text-xs text-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-slate-400 mb-1">Interview Invites</label>
-                          <Input
-                            type="number"
-                            value={dashboardPushData.interviewCount}
-                            onChange={(e) => setDashboardPushData({ ...dashboardPushData, interviewCount: Number(e.target.value) })}
-                            className="bg-slate-950 border-slate-800 text-xs text-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-slate-400 mb-1">Offers Received</label>
-                          <Input
-                            type="number"
-                            value={dashboardPushData.offerCount}
-                            onChange={(e) => setDashboardPushData({ ...dashboardPushData, offerCount: Number(e.target.value) })}
-                            className="bg-slate-950 border-slate-800 text-xs text-white"
-                          />
-                        </div>
+                      <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">Dashboard Metrics</label>
+                      <p className="text-xs text-slate-400 mb-3">These are admin-managed values shown exactly on the candidate dashboard. Application and campaign changes do not alter them.</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
+                        {([
+                          ['applications', 'Applications Applied'],
+                          ['responses', 'Responses'],
+                          ['interviews', 'Interviews'],
+                          ['offers', 'Offers'],
+                          ['rejected', 'Rejected'],
+                          ['shortlisted', 'Shortlisted'],
+                        ] as const).map(([key, label]) => (
+                          <div key={key}>
+                            <label className="block text-xs text-slate-400 mb-1">{label}</label>
+                            <Input
+                              type="text"
+                              value={dashboardPushData[key]}
+                              onChange={(e) => setDashboardPushData({ ...dashboardPushData, [key]: e.target.value })}
+                              className="bg-slate-950 border-slate-800 text-xs text-white"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="max-w-xs">
                         <div>
                           <label className="block text-xs text-slate-400 mb-1">Jobs In Progress</label>
                           <Input
@@ -1267,6 +1373,52 @@ export default function AdminPortal() {
                 Please select a candidate to customize their dashboard.
               </Card>
             )}
+          </div>
+        )}
+
+        {/* APPLICATION MANAGEMENT */}
+        {activeTab === 'applications' && (
+          <div className="space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2"><Briefcase className="w-5 h-5 text-cyan-400" /> Application Management</h1>
+                <p className="text-slate-400 text-xs mt-0.5">Persisted application records power the candidate dashboard and its metrics.</p>
+              </div>
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700">
+                <Upload className="w-3.5 h-3.5" /> Import CSV
+                <input type="file" accept=".csv,text/csv" className="hidden" onChange={importCsv} disabled={!selectedUser || applicationSaving} />
+              </label>
+            </div>
+
+            <Card className="bg-slate-900 border-slate-800 p-4">
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                <select value={selectedUser?.id || ''} onChange={(e) => { const candidate = users.find((u) => u.id === e.target.value); if (candidate) handleSelectUser(candidate, 'applications'); }} className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white">
+                  <option value="">Select a candidate</option>
+                  {users.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.fullName || candidate.email} — {candidate.email}</option>)}
+                </select>
+                {selectedUser && <div className="text-xs text-slate-400">{selectedUser.subscriptionInfo?.planName || selectedUser.dashboardData?.currentPlan || 'Free'} plan · {managedApplications.length} applications</div>}
+              </div>
+            </Card>
+
+            {selectedUser ? <>
+              <form onSubmit={saveApplication}>
+                <Card className="bg-slate-900 border-slate-800 shadow-xl">
+                  <CardHeader className="border-b border-slate-800 pb-3"><CardTitle className="text-sm text-white">{editingApplicationId ? 'Edit application' : `Add application for ${selectedUser.fullName || selectedUser.email}`}</CardTitle><CardDescription className="text-xs text-slate-400">Fields marked by the workflow are required. Changes are immediately persisted for the user.</CardDescription></CardHeader>
+                  <CardContent className="grid gap-3 pt-5 sm:grid-cols-2 lg:grid-cols-3">
+                    {([['jobTitle', 'Job title *'], ['company', 'Company *'], ['location', 'Location'], ['jobType', 'Job type'], ['jobUrl', 'Job URL'], ['jobReference', 'Job ID / reference'], ['salary', 'Salary / range'], ['source', 'Application source'], ['campaign', 'Campaign'], ['recruiterContact', 'Recruiter / contact']] as const).map(([key, label]) => <div key={key}><label className="mb-1 block text-[11px] text-slate-400">{label}</label><Input value={applicationForm[key]} onChange={(e) => setApplicationForm({ ...applicationForm, [key]: e.target.value })} className="bg-slate-950 border-slate-800 text-xs text-white" /></div>)}
+                    <div><label className="mb-1 block text-[11px] text-slate-400">Status *</label><select value={applicationForm.status} onChange={(e) => setApplicationForm({ ...applicationForm, status: e.target.value })} className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-white">{APPLICATION_STATUSES.map((status) => <option key={status}>{status}</option>)}</select></div>
+                    <div><label className="mb-1 block text-[11px] text-slate-400">Applied date *</label><Input type="date" value={applicationForm.appliedDate} onChange={(e) => setApplicationForm({ ...applicationForm, appliedDate: e.target.value })} className="bg-slate-950 border-slate-800 text-xs text-white" /></div>
+                    <div className="sm:col-span-2 lg:col-span-3"><label className="mb-1 block text-[11px] text-slate-400">Notes</label><TextArea value={applicationForm.notes} onChange={(e) => setApplicationForm({ ...applicationForm, notes: e.target.value })} className="min-h-20 bg-slate-950 border-slate-800 text-xs text-white" /></div>
+                    <div className="sm:col-span-2 lg:col-span-3 flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => { setApplicationForm(blankApplication()); setEditingApplicationId(null); }} className="border-slate-700 text-xs text-slate-300">Cancel</Button><Button type="submit" disabled={applicationSaving} className="bg-gradient-to-r from-blue-600 to-cyan-500 text-xs">{applicationSaving ? 'Saving…' : editingApplicationId ? 'Save changes' : 'Add application'}</Button></div>
+                  </CardContent>
+                </Card>
+              </form>
+
+              <Card className="overflow-hidden bg-slate-900 border-slate-800">
+                <div className="flex flex-col gap-3 border-b border-slate-800 p-4 sm:flex-row"><Input placeholder="Search company, job, campaign" value={applicationSearch} onChange={(e) => setApplicationSearch(e.target.value)} className="bg-slate-950 border-slate-800 text-xs text-white" /><select value={applicationStatusFilter} onChange={(e) => setApplicationStatusFilter(e.target.value)} className="rounded-lg border border-slate-800 bg-slate-950 px-3 text-xs text-white"><option value="ALL">All statuses</option>{APPLICATION_STATUSES.map((status) => <option key={status}>{status}</option>)}</select></div>
+                <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-xs"><thead className="bg-slate-950/70 text-slate-400"><tr><th className="p-3">Job</th><th className="p-3">Company</th><th className="p-3">Status</th><th className="p-3">Applied</th><th className="p-3">Campaign</th><th className="p-3">Updated</th><th className="p-3">Actions</th></tr></thead><tbody className="divide-y divide-slate-800">{managedApplications.map((application) => <tr key={application.id} className="text-slate-200"><td className="p-3 font-semibold">{application.jobTitle}</td><td className="p-3">{application.company}</td><td className="p-3"><Badge variant="primary">{application.status}</Badge></td><td className="p-3">{application.appliedDate || '—'}</td><td className="p-3">{application.campaign || '—'}</td><td className="p-3">{application.updatedAt ? new Date(application.updatedAt).toLocaleDateString() : '—'}</td><td className="p-3 whitespace-nowrap"><button onClick={() => editApplication(application)} className="mr-3 text-cyan-400 hover:text-cyan-300">Edit</button><button onClick={() => archiveApplication(application)} className="text-red-400 hover:text-red-300">Archive</button></td></tr>)}{!managedApplications.length && <tr><td colSpan={7} className="p-8 text-center text-slate-500">No applications match this candidate and filter.</td></tr>}</tbody></table></div>
+              </Card>
+            </> : <Card className="bg-slate-900 border-slate-800 p-8 text-center text-slate-500 text-sm">Select a candidate to manage their applications.</Card>}
           </div>
         )}
 

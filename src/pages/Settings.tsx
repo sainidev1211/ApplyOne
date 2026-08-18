@@ -9,7 +9,7 @@ import { toast } from '@/store/toastStore';
 import { motion } from 'framer-motion';
 import { usersApi, authApi, aiApi, resumeApi } from '@/services/api/apiClient';
 
-type SettingsTab = 'personal' | 'security' | 'preferences';
+type SettingsTab = 'personal' | 'preferences';
 
 export default function Settings() {
   const { profile, user, updateProfile } = useAuthStore();
@@ -242,7 +242,7 @@ export default function Settings() {
 
           {/* Side Menu Tab Selector */}
           <Card className="w-full md:w-64 p-3 border border-border-light dark:border-border-dark bg-white dark:bg-card-dark flex flex-row md:flex-col gap-1.5 overflow-x-auto md:overflow-visible shadow-sm">
-            {(['personal', 'security', 'preferences'] as SettingsTab[]).map((tab) => (
+            {(['personal', 'preferences'] as SettingsTab[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -252,8 +252,8 @@ export default function Settings() {
                     : 'text-text-secondary-light dark:text-text-secondary-dark hover:bg-bg-alt-light dark:hover:bg-bg-alt-dark'
                 }`}
               >
-                <span>{tab === 'personal' ? '👤' : tab === 'security' ? '🔒' : '⚙️'}</span>
-                <span>{tab === 'personal' ? 'Personal Details' : tab === 'security' ? 'Security & Password' : 'Preferences'}</span>
+                <span>{tab === 'personal' ? '👤' : '⚙️'}</span>
+                <span>{tab === 'personal' ? 'Personal Details' : 'Preferences'}</span>
               </button>
             ))}
           </Card>
@@ -379,74 +379,7 @@ export default function Settings() {
               </Card>
             )}
 
-            {/* TAB 2: SECURITY & PASSWORD */}
-            {activeTab === 'security' && (
-              <Card className="p-6 md:p-8 border border-border-light dark:border-border-dark bg-white dark:bg-card-dark shadow-md text-left">
-                <div className="border-b border-border-light dark:border-border-dark pb-4 mb-6">
-                  <h3 className="text-lg font-bold text-text-primary-light dark:text-text-primary-dark">
-                    Security & Credentials
-                  </h3>
-                  <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-0.5">
-                    Update your account password. Your current password is required to verify your identity.
-                  </p>
-                </div>
 
-                <form onSubmit={handleUpdatePassword} className="space-y-5">
-                  <Input
-                    label="Current Password"
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="••••••••"
-                    id="currentPassword"
-                    required
-                  />
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <Input
-                      label="New Password"
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="••••••••"
-                      id="newPassword"
-                      required
-                    />
-                    <Input
-                      label="Confirm New Password"
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••"
-                      id="confirmPassword"
-                      required
-                    />
-                  </div>
-
-                  {/* Password requirements */}
-                  <div className="p-4 rounded-xl border border-border-light dark:border-border-dark bg-slate-50 dark:bg-bg-dark/40 space-y-1.5 text-xs text-text-secondary-light dark:text-text-secondary-dark">
-                    <p className="font-semibold text-text-primary-light dark:text-text-primary-dark">Password requirements:</p>
-                    {[
-                      { label: 'At least 8 characters', test: newPassword.length >= 8 },
-                      { label: 'One uppercase letter', test: /[A-Z]/.test(newPassword) },
-                      { label: 'One lowercase letter', test: /[a-z]/.test(newPassword) },
-                      { label: 'One number', test: /[0-9]/.test(newPassword) },
-                    ].map((rule) => (
-                      <div key={rule.label} className="flex items-center gap-1.5">
-                        <span className={rule.test ? 'text-green-500 font-bold' : 'text-slate-400 font-bold'}>✓</span>
-                        <span>{rule.label}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="pt-4 border-t border-border-light dark:border-border-dark flex justify-end">
-                    <Button type="submit" variant="gradient" disabled={passwordLoading}>
-                      {passwordLoading ? 'Updating Credentials...' : 'Update Password'}
-                    </Button>
-                  </div>
-                </form>
-              </Card>
-            )}
 
             {/* TAB 3: PREFERENCES */}
             {activeTab === 'preferences' && (

@@ -13,13 +13,17 @@ const Signup = lazy(() => import('@/pages/Signup'));
 const VerifyEmail = lazy(() => import('@/pages/VerifyEmail'));
 const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
+const CompleteProfile = lazy(() => import('@/pages/CompleteProfile'));
 const AuthCallback = lazy(() => import('@/pages/AuthCallback'));
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const Subscriptions = lazy(() => import('@/pages/Subscriptions'));
 const AtsChecker = lazy(() => import('@/pages/AtsChecker'));
 const Settings = lazy(() => import('@/pages/Settings'));
+const Support = lazy(() => import('@/pages/Support'));
 const AdminPanel = lazy(() => import('@/pages/AdminPanel'));
 const AdminLogin = lazy(() => import('@/features/admin/AdminLogin'));
+const AdminCampaigns = lazy(() => import('@/pages/AdminCampaigns'));
+const AdminSubscriptions = lazy(() => import('@/pages/AdminSubscriptions'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('@/pages/TermsOfService'));
 
@@ -44,6 +48,7 @@ export function AppRoutes() {
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/complete-profile" element={<CompleteProfile />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
@@ -66,6 +71,7 @@ export function AppRoutes() {
           <Route path="/dashboard/subscriptions" element={<Subscriptions />} />
           <Route path="/dashboard/ats-checker" element={<AtsChecker />} />
           <Route path="/dashboard/settings" element={<Settings />} />
+          <Route path="/dashboard/support" element={<Support />} />
         </Route>
 
         {/* Executive Admin Management Portal */}
@@ -89,6 +95,10 @@ export function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route path="/admin/campaigns" element={<ProtectedRoute><RoleGuard allowedRoles={['ADMIN']}><AdminCampaigns /></RoleGuard></ProtectedRoute>} />
+        <Route path="/admin/campaigns/:id" element={<ProtectedRoute><RoleGuard allowedRoles={['ADMIN']}><AdminCampaigns /></RoleGuard></ProtectedRoute>} />
+        <Route path="/admin/subscriptions" element={<ProtectedRoute><RoleGuard allowedRoles={['ADMIN']}><AdminSubscriptions /></RoleGuard></ProtectedRoute>} />
+        <Route path="/admin/subscriptions/:id" element={<ProtectedRoute><RoleGuard allowedRoles={['ADMIN']}><AdminSubscriptions /></RoleGuard></ProtectedRoute>} />
 
         {/* Wildcard redirect to Home */}
         <Route path="*" element={<Navigate to="/" replace />} />

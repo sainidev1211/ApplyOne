@@ -1,0 +1,4 @@
+import { Body, Controller, Get, Patch, Post, Param, Query, Request, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js'; import { RolesGuard } from '../auth/guards/roles.guard.js'; import { Roles } from '../auth/decorators/roles.decorator.js'; import { CampaignsService } from './campaigns.service.js';
+@Controller('admin/campaigns') @UseGuards(JwtAuthGuard, RolesGuard) @Roles('ADMIN')
+export class CampaignsController { constructor(private readonly service: CampaignsService) {} @Get() list(@Query() q:any){ return this.service.list(q); } @Get(':id') detail(@Param('id') id:string){ return this.service.detail(id); } @Post() create(@Body() data:any,@Request() req:any){ return this.service.create(data, req.user.id); } @Patch(':id') update(@Param('id') id:string,@Body() data:any){ return this.service.update(id,data); } }

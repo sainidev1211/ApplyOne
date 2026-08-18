@@ -4,12 +4,14 @@ import { Model } from 'mongoose';
 import { SubscribeDto, CancelSubscriptionDto } from './dto/subscription.dto.js';
 import { Subscription, SubscriptionDocument } from './schemas/subscription.schema.js';
 import { Plan, PlanDocument } from '../plans/schemas/plan.schema.js';
+import { User, UserDocument } from '../users/schemas/user.schema.js';
 
 @Injectable()
 export class SubscriptionsService {
   constructor(
     @InjectModel(Subscription.name) private subscriptionModel: Model<SubscriptionDocument>,
     @InjectModel(Plan.name) private planModel: Model<PlanDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
   ) {}
 
   async getSubscription(userId: string) {
@@ -80,6 +82,26 @@ export class SubscriptionsService {
       cancelledAt: new Date(),
       cancellationReason: dto.reason,
     }, { new: true }).lean();
+
+    // Create notification on user document for record
+    try {
+      const user = await this.userModel.findById(userId).exec();
+      if (user) {
+        user.notifications = user.notifications || [];
+        user.notifications.unshift({
+          id: Math.random().toString(36).substring(2, 9),
+          title: 'Subscription Cancelled',
+          message: `Your subscription has been cancelled. Reason: ${dto.reason || 'Requested by user'}`,
+          type: 'INFO',
+          link: '/dashboard/subscriptions',
+          read: false,
+          createdAt: new Date(),
+        } as any);
+        await user.save();
+      }
+    } catch (err) {
+      // non-blocking
+    }
 
     return updated;
   }

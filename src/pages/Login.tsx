@@ -9,7 +9,7 @@ import { toast } from '@/store/toastStore';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { SEO } from '@/components/shared/SEO';
-import { authClient } from '@/services/authClient';
+import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
 
 export default function Login() {
   const { signIn, loading } = useAuthStore();
@@ -23,7 +23,11 @@ export default function Login() {
     const result = await signIn(email, password);
     if (result.success) {
       toast.success('Welcome back!', 'Signed in');
-      navigate((location.state as any)?.from?.pathname || ROUTES.DASHBOARD, { replace: true });
+      if (result.needsProfileCompletion) {
+        navigate(ROUTES.COMPLETE_PROFILE || '/complete-profile', { replace: true });
+      } else {
+        navigate((location.state as any)?.from?.pathname || ROUTES.DASHBOARD, { replace: true });
+      }
     } else {
       toast.error(result.error || 'Invalid email or password.', 'Sign in failed');
     }
@@ -32,22 +36,63 @@ export default function Login() {
   return (
     <>
       <SEO title="Sign In" description="Sign in to your ApplyOne account." />
-      <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+      <div className="space-y-6">
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-bold tracking-tight text-text-primary-light dark:text-text-primary-dark">Welcome to ApplyOne</h2>
-          <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">Sign in with your email and password.</p>
+          <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">Sign in to manage your job applications.</p>
         </div>
-        <div className="space-y-4">
-          <Input label="Email" type="email" autoComplete="email" error={errors.email?.message} {...register('email')} />
-          <Input label="Password" type="password" autoComplete="current-password" error={errors.password?.message} {...register('password')} />
-          <Button type="submit" className="w-full" loading={loading}>Sign In</Button>
+
+        {/* Email & Password Form FIRST */}
+        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+          <Input
+            label="Email Address"
+            type="email"
+            autoComplete="email"
+            placeholder="john@example.com"
+            error={errors.email?.message}
+            {...register('email')}
+          />
+          <div className="space-y-1">
+            <Input
+              label="Password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              error={errors.password?.message}
+              {...register('password')}
+            />
+            <div className="flex justify-end pt-1">
+              <Link to={ROUTES.FORGOT_PASSWORD} className="text-xs font-medium text-primary hover:underline">
+                Forgot password?
+              </Link>
+            </div>
+          </div>
+
+          <Button type="submit" className="w-full h-11" loading={loading}>
+            Sign In
+          </Button>
+        </form>
+
+        {/* OR Divider */}
+        <div className="relative flex items-center justify-center my-6">
+          <div className="border-t border-border-light dark:border-border-dark w-full" />
+          <span className="bg-white dark:bg-card-dark px-3 text-xs uppercase text-text-secondary-light dark:text-text-secondary-dark font-semibold tracking-wider">
+            OR
+          </span>
+          <div className="border-t border-border-light dark:border-border-dark w-full" />
         </div>
-        {/* Google login removed */}
-        <div className="flex justify-between text-sm">
-          <Link to={ROUTES.FORGOT_PASSWORD} className="text-primary hover:underline">Forgot password?</Link>
-          <Link to={ROUTES.SIGNUP} className="text-primary hover:underline">Create an account</Link>
+
+        {/* Google Authentication */}
+        <GoogleAuthButton buttonText="Continue with Google" />
+
+        {/* Sign up Link */}
+        <div className="text-center text-sm text-text-secondary-light dark:text-text-secondary-dark pt-2">
+          Don't have an account?{' '}
+          <Link to={ROUTES.SIGNUP} className="font-semibold text-primary hover:underline">
+            Create an account
+          </Link>
         </div>
-      </form>
+      </div>
     </>
   );
 }

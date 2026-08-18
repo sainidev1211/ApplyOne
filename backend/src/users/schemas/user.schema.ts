@@ -5,9 +5,10 @@ import { Document } from 'mongoose';
 export class StoredResume {
   @Prop({ required: true }) id: string;
   @Prop({ required: true }) fileName: string;
-  @Prop({ required: true }) storagePath: string;
+  @Prop({ default: 'database' }) storagePath: string;
   @Prop({ required: true }) mimeType: string;
   @Prop({ required: true }) fileSize: number;
+  @Prop({ type: Buffer }) fileData?: Buffer;
   @Prop({ default: 1 }) version: number;
   @Prop({ default: true }) isDefault: boolean;
   @Prop({ default: 'ACTIVE' }) status: string;
@@ -90,7 +91,13 @@ export class User {
   googleId?: string;
 
   @Prop({ default: false })
-  googleOnboardingPending: boolean;
+  profileCompleted: boolean;
+
+  @Prop()
+  resetPasswordTokenHash?: string;
+
+  @Prop()
+  resetPasswordExpiresAt?: Date;
 
   @Prop()
   resumeFileName?: string;
@@ -113,6 +120,9 @@ export class User {
   @Prop({ type: Object, default: {} })
   preferences?: Record<string, unknown>;
 
+  // A Mixed object keeps legacy MongoDB dashboard fields intact while formally
+  // supporting currentPlan, remainingCredits, jobsInProgress, adminMessage and
+  // flexible string-valued dashboardMetrics.
   @Prop({ type: Object, default: {} })
   dashboardData?: Record<string, any>;
 

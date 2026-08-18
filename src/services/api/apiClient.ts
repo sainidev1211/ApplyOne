@@ -77,6 +77,7 @@ async function apiFormData<T>(path: string, formData: FormData): Promise<T> {
 export const subscriptionsApi = {
   getCurrent: () => apiFetch<any>('/subscription'),
   getHistory: () => apiFetch<any[]>('/subscription/history'),
+  cancel: (data?: any) => apiFetch<any>('/subscription/cancel', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // ---------------------------------------------------------------------------
@@ -107,9 +108,20 @@ export interface DashboardData {
   currentPlan?: string;
   remainingCredits?: { job: number; ai: number; resume: number; ats: number };
   resumeStatus?: string;
-  applicationsCount?: number;
-  interviewCount?: number;
-  offerCount?: number;
+  applicationsCount?: string | number;
+  interviewCount?: string | number;
+  offerCount?: string | number;
+  responsesCount?: string | number;
+  rejectedCount?: string | number;
+  shortlistedCount?: string | number;
+  dashboardMetrics?: {
+    applications: string | number;
+    responses: string | number;
+    interviews: string | number;
+    offers: string | number;
+    rejected: string | number;
+    shortlisted: string | number;
+  };
   jobsInProgress?: number;
   recentActivity?: Application[];
   profileCompletion?: number;
@@ -117,6 +129,28 @@ export interface DashboardData {
   activeApplications?: number;
   successRate?: number;
   tier?: string;
+  applications?: AdminManagedApplication[];
+  applicationsThisWeek?: number;
+}
+
+export interface AdminManagedApplication {
+  id: string;
+  jobTitle: string;
+  company: string;
+  status: string;
+  appliedDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  location?: string;
+  jobType?: string;
+  jobUrl?: string;
+  jobReference?: string;
+  salary?: string;
+  source?: string;
+  campaign?: string;
+  notes?: string;
+  recruiterContact?: string;
+  statusHistory?: Array<{ status: string; timestamp: string; note?: string }>;
 }
 
 export interface Statistics {

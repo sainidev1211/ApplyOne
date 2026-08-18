@@ -34,6 +34,7 @@ import { JobImportModule } from './job-import/job-import.module.js';
 import { JobAutomationModule } from './job-automation/job-automation.module.js';
 import { SearchModule } from './search/search.module.js';
 import { AiAnalyticsModule } from './ai-analytics/ai-analytics.module.js';
+import { CampaignsModule } from './campaigns/campaigns.module.js';
 
 // Production Infrastructure Modules
 import { RedisCacheModule } from './redis/redis-cache.module.js';
@@ -89,6 +90,7 @@ import { AuditModule } from './audit/audit.module.js';
     JobAutomationModule,
     SearchModule,
     AiAnalyticsModule,
+    CampaignsModule,
     RedisCacheModule,
     QueueModule.register(),
     NotificationsModule,

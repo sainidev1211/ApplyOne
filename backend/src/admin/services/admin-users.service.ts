@@ -13,6 +13,7 @@ import { Subscription, SubscriptionDocument } from '../../subscriptions/schemas/
 import { Plan, PlanDocument } from '../../plans/schemas/plan.schema.js';
 import { PaginationQueryDto } from '../../users/dto/pagination-query.dto.js';
 import { randomUUID } from 'crypto';
+import { UpdateUserDashboardDto } from '../dto/update-dashboard-metrics.dto.js';
 
 @Injectable()
 export class AdminUsersService {
@@ -211,7 +212,20 @@ export class AdminUsersService {
       portfolioUrl: user.portfolioUrl || null,
       resumeFileName: user.resumeFileName || null,
       resumePath: user.resumePath || null,
-      resumes: user.resumes || [],
+      resumes: (user.resumes || []).map((r: any) => ({
+        id: r.id,
+        fileName: r.fileName,
+        storagePath: r.storagePath || 'database',
+        fileSize: r.fileSize,
+        mimeType: r.mimeType,
+        version: r.version,
+        isDefault: r.isDefault,
+        status: r.status,
+        atsAnalysis: r.atsAnalysis || null,
+        publicUrl: `/admin/users/${user._id || user.email}/resume/download`,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+      })),
       preferences: user.preferences || {},
       dashboardData: user.dashboardData || {
         currentPlan: 'Free',
@@ -232,6 +246,36 @@ export class AdminUsersService {
       updatedAt: (user as any).updatedAt,
       lastLoginAt: user.lastLoginAt || null,
     };
+  }
+
+  async getResumeDownload(userId: string, resumeId?: string) {
+    const user = await this.userModel.findById(userId).lean().exec();
+    if (!user) throw new NotFoundException(`User "${userId}" not found`);
+    const resumes: any[] = user.resumes || [];
+    let resume = resumeId ? resumes.find((r) => r.id === resumeId) : null;
+    if (!resume) {
+      resume = resumes.find((r) => r.isDefault) || resumes[0];
+    }
+    if (!resume) throw new NotFoundException('Candidate has no uploaded resume');
+
+    if (resume.fileData) {
+      const buffer = Buffer.isBuffer(resume.fileData)
+        ? resume.fileData
+        : Buffer.from(resume.fileData.buffer || resume.fileData);
+      return { resume, buffer, filePath: null };
+    }
+
+    if (resume.storagePath && resume.storagePath !== 'database') {
+      const uploadDir = './uploads';
+      const path = await import('path');
+      const fs = await import('fs');
+      const filePath = path.join(uploadDir, path.basename(resume.storagePath));
+      if (fs.existsSync(filePath)) {
+        return { resume, buffer: null, filePath };
+      }
+    }
+
+    throw new NotFoundException('Candidate resume file is unavailable');
   }
 
   async updateUser(id: string, data: Record<string, any>) {
@@ -269,23 +313,110 @@ export class AdminUsersService {
     return this.findOne(id);
   }
 
-  async updateUserDashboard(id: string, dashboardData: Record<string, any>) {
+  async updateUserDashboard(id: string, dashboardData: UpdateUserDashboardDto) {
     const user = await this.userModel.findById(id).exec();
     if (!user) {
       throw new NotFoundException(`User with ID "${id}" not found`);
     }
 
+    const previousPlan = user.dashboardData?.currentPlan;
+    // Preserve the entire existing dashboard document and update only the fields
+    // explicitly submitted. Metrics live separately from applications so campaign
+    // and application updates can never replace admin-managed values.
+    const { dashboardMetrics, ...restDashboardData } = dashboardData;
+    const safeDashboardData: Record<string, any> = restDashboardData;
+    const currentMetrics = (user.dashboardData as any)?.dashboardMetrics || {};
+    if (dashboardMetrics !== undefined) {
+      if (!dashboardMetrics || typeof dashboardMetrics !== 'object' || Array.isArray(dashboardMetrics)) {
+        throw new BadRequestException('dashboardMetrics must be an object');
+      }
+      const allowedMetrics = ['applications', 'responses', 'interviews', 'offers', 'rejected', 'shortlisted'];
+      const metricPatch: Record<string, string> = {};
+      const requestedMetrics = dashboardMetrics as Record<string, unknown>;
+      for (const key of allowedMetrics) {
+        if (requestedMetrics[key] !== undefined) {
+          const value = requestedMetrics[key];
+          if (typeof value !== 'string' && typeof value !== 'number') {
+            throw new BadRequestException(`${key} must be text`);
+          }
+          // String() is intentional: it preserves the exact user-entered text,
+          // including emoji and symbols, without numeric parsing or calculation.
+          metricPatch[key] = String(value);
+        }
+      }
+      safeDashboardData.dashboardMetrics = { ...currentMetrics, ...metricPatch };
+    }
     user.dashboardData = {
       ...(user.dashboardData || {}),
-      ...dashboardData,
+      ...safeDashboardData,
       updatedAt: new Date(),
     };
+
+    // If admin assigned or changed plan, sync MongoDB Subscription collection directly
+    if (dashboardData.currentPlan && dashboardData.currentPlan !== 'Free') {
+      try {
+        const planSlug = String(dashboardData.currentPlan).toLowerCase();
+        let plan = await this.planModel.findOne({
+          $or: [
+            { id: planSlug },
+            { name: new RegExp(`^${dashboardData.currentPlan}$`, 'i') },
+          ],
+        }).lean().exec();
+
+        const startDate = new Date();
+        const expiresAt = new Date();
+        expiresAt.setMonth(expiresAt.getMonth() + 1);
+
+        await this.subscriptionModel.updateMany(
+          { userId: id, status: { $in: ['ACTIVE', 'TRIAL'] } },
+          { $set: { status: 'CANCELLED', cancellationReason: 'Admin plan update' } }
+        );
+
+        await this.subscriptionModel.create({
+          userId: id,
+          planId: plan ? plan.id : planSlug,
+          status: 'ACTIVE',
+          startDate,
+          expiresAt,
+          autoRenew: true,
+          remainingJobCredits: Number(dashboardData.remainingCredits?.job ?? plan?.jobCredits ?? 100),
+          remainingAiCredits: Number(dashboardData.remainingCredits?.ai ?? plan?.aiCredits ?? 50),
+          remainingResumeCredits: Number(dashboardData.remainingCredits?.resume ?? plan?.resumeCredits ?? 20),
+          remainingAtsCredits: Number(dashboardData.remainingCredits?.ats ?? plan?.atsCredits ?? 50),
+        } as any);
+
+        // Notify user about admin plan change
+        if (previousPlan !== dashboardData.currentPlan) {
+          user.notifications = user.notifications || [];
+          user.notifications.unshift({
+            id: randomUUID(),
+            title: 'Subscription Plan Updated',
+            message: `An administrator updated your active plan to ${dashboardData.currentPlan}.`,
+            type: 'INFO',
+            link: '/dashboard',
+            read: false,
+            createdAt: new Date(),
+          } as any);
+        }
+      } catch (err: any) {
+        this.logger.warn(`Failed to sync subscription record: ${err.message}`);
+      }
+    } else if (dashboardData.currentPlan === 'Free') {
+      try {
+        await this.subscriptionModel.updateMany(
+          { userId: id, status: { $in: ['ACTIVE', 'TRIAL'] } },
+          { $set: { status: 'CANCELLED', cancellationReason: 'Set to Free by Admin' } }
+        );
+      } catch (err: any) {
+        this.logger.warn(`Failed to cancel active subscriptions: ${err.message}`);
+      }
+    }
 
     await user.save();
     this.logger.log(`Admin pushed dashboard update for user ${id}`);
     return {
       success: true,
-      message: 'User dashboard updated successfully',
+      message: 'User dashboard and subscription updated successfully',
       dashboardData: user.dashboardData,
     };
   }
@@ -379,5 +510,242 @@ export class AdminUsersService {
     });
 
     return { success: true, message: 'Default admin seeded', user: { email } };
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // APPLICATION MANAGEMENT (stored in user.dashboardData.applications[])
+  // ───────────────────────────────────────────────────────────────────────────
+
+  async getApplications(userId: string, filters?: { status?: string; search?: string; page?: number; limit?: number }) {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) throw new NotFoundException(`User "${userId}" not found`);
+
+    let apps: any[] = (user.dashboardData as any)?.applications || [];
+
+    if (filters?.status && filters.status !== 'ALL') {
+      apps = apps.filter((a: any) => a.status === filters.status);
+    }
+    if (filters?.search) {
+      const q = filters.search.toLowerCase();
+      apps = apps.filter(
+        (a: any) =>
+          a.jobTitle?.toLowerCase().includes(q) ||
+          a.company?.toLowerCase().includes(q) ||
+          a.campaign?.toLowerCase().includes(q),
+      );
+    }
+
+    // Sort newest first
+    apps = [...apps].sort((a: any, b: any) => new Date(b.updatedAt || b.appliedDate || b.createdAt).getTime() - new Date(a.updatedAt || a.appliedDate || a.createdAt).getTime());
+
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 50;
+    const total = apps.length;
+    const items = apps.slice((page - 1) * limit, page * limit);
+
+    return {
+      items,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async createApplication(userId: string, data: {
+    jobTitle: string;
+    company: string;
+    location?: string;
+    jobType?: string;
+    jobUrl?: string;
+    jobReference?: string;
+    salary?: string;
+    status: string;
+    appliedDate?: string;
+    source?: string;
+    campaign?: string;
+    notes?: string;
+    recruiterContact?: string;
+  }) {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) throw new NotFoundException(`User "${userId}" not found`);
+
+    if (!data.jobTitle?.trim()) throw new BadRequestException('Job title is required');
+    if (!data.company?.trim()) throw new BadRequestException('Company is required');
+    if (!data.status?.trim()) throw new BadRequestException('Status is required');
+    this.assertValidApplicationStatus(data.status);
+
+    const app = {
+      id: randomUUID(),
+      jobTitle: data.jobTitle.trim(),
+      company: data.company.trim(),
+      location: data.location?.trim() || '',
+      jobType: data.jobType || 'Full-time',
+      jobUrl: data.jobUrl?.trim() || '',
+      jobReference: data.jobReference?.trim() || '',
+      salary: data.salary?.trim() || '',
+      status: data.status,
+      appliedDate: data.appliedDate || new Date().toISOString().split('T')[0],
+      source: data.source || 'ApplyOne',
+      campaign: data.campaign?.trim() || '',
+      notes: data.notes?.trim() || '',
+      recruiterContact: data.recruiterContact?.trim() || '',
+      statusHistory: [
+        {
+          status: data.status,
+          timestamp: new Date().toISOString(),
+          note: 'Application created by admin',
+        },
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const dd: any = user.dashboardData || {};
+    const applications: any[] = dd.applications || [];
+    applications.unshift(app);
+
+    user.dashboardData = {
+      ...dd,
+      applications,
+      updatedAt: new Date(),
+    };
+
+    await user.save();
+    this.logger.log(`Admin created application "${app.jobTitle}" at "${app.company}" for user ${userId}`);
+    return { success: true, application: app };
+  }
+
+  async updateApplication(userId: string, appId: string, data: Partial<{
+    jobTitle: string;
+    company: string;
+    location: string;
+    jobType: string;
+    jobUrl: string;
+    jobReference: string;
+    salary: string;
+    status: string;
+    appliedDate: string;
+    source: string;
+    campaign: string;
+    notes: string;
+    recruiterContact: string;
+  }>) {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) throw new NotFoundException(`User "${userId}" not found`);
+
+    const dd: any = user.dashboardData || {};
+    const applications: any[] = dd.applications || [];
+    const idx = applications.findIndex((a: any) => a.id === appId);
+    if (idx === -1) throw new NotFoundException(`Application "${appId}" not found`);
+
+    const existing = applications[idx];
+    if (data.status) this.assertValidApplicationStatus(data.status);
+    const updated = {
+      ...existing,
+      ...Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined)),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Track status changes
+    if (data.status && data.status !== existing.status) {
+      updated.statusHistory = [
+        ...(existing.statusHistory || []),
+        {
+          status: data.status,
+          timestamp: new Date().toISOString(),
+          note: `Status changed from ${existing.status} to ${data.status} by admin`,
+        },
+      ];
+    }
+
+    applications[idx] = updated;
+
+    user.dashboardData = {
+      ...dd,
+      applications,
+      updatedAt: new Date(),
+    };
+
+    await user.save();
+    this.logger.log(`Admin updated application ${appId} for user ${userId}`);
+    return { success: true, application: updated };
+  }
+
+  async deleteApplication(userId: string, appId: string) {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) throw new NotFoundException(`User "${userId}" not found`);
+
+    const dd: any = user.dashboardData || {};
+    const applications: any[] = dd.applications || [];
+    const idx = applications.findIndex((a: any) => a.id === appId);
+    if (idx === -1) throw new NotFoundException(`Application "${appId}" not found`);
+
+    // Keep the audit trail and timeline available; archive is a soft action.
+    const archived = {
+      ...applications[idx],
+      status: 'Withdrawn',
+      archivedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      statusHistory: [
+        ...(applications[idx].statusHistory || []),
+        { status: 'Withdrawn', timestamp: new Date().toISOString(), note: `Archived by admin (previous status: ${applications[idx].status})` },
+      ],
+    };
+    applications[idx] = archived;
+
+    user.dashboardData = {
+      ...dd,
+      applications,
+      updatedAt: new Date(),
+    };
+
+    await user.save();
+    this.logger.log(`Admin archived application ${appId} for user ${userId}`);
+    return { success: true, message: 'Application archived' };
+  }
+
+  async bulkCreateApplications(userId: string, apps: any[]) {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) throw new NotFoundException(`User "${userId}" not found`);
+
+    const dd: any = user.dashboardData || {};
+    const existing: any[] = dd.applications || [];
+
+    const created = apps.map((data: any) => ({
+      id: randomUUID(),
+      jobTitle: (data.jobTitle || data['Job Title'] || '').trim(),
+      company: (data.company || data['Company'] || '').trim(),
+      location: (data.location || data['Location'] || '').trim(),
+      jobType: data.jobType || data['Job Type'] || 'Full-time',
+      jobUrl: (data.jobUrl || data['Job URL'] || '').trim(),
+      jobReference: (data.jobReference || data['Job Reference'] || '').trim(),
+      salary: (data.salary || data['Salary'] || '').trim(),
+      status: data.status || data['Status'] || 'Applied',
+      appliedDate: data.appliedDate || data['Applied Date'] || new Date().toISOString().split('T')[0],
+      source: data.source || data['Source'] || 'ApplyOne',
+      campaign: (data.campaign || data['Campaign'] || '').trim(),
+      notes: (data.notes || data['Notes'] || '').trim(),
+      recruiterContact: (data.recruiterContact || data['Recruiter Contact'] || '').trim(),
+      statusHistory: [{ status: data.status || 'Applied', timestamp: new Date().toISOString(), note: 'Bulk import by admin' }],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })).filter((a) => a.jobTitle && a.company);
+    created.forEach((application) => this.assertValidApplicationStatus(application.status));
+
+    const merged = [...created, ...existing];
+    user.dashboardData = {
+      ...dd,
+      applications: merged,
+      updatedAt: new Date(),
+    };
+
+    await user.save();
+    this.logger.log(`Admin bulk-imported ${created.length} applications for user ${userId}`);
+    return { success: true, created: created.length, skipped: apps.length - created.length };
+  }
+
+  private assertValidApplicationStatus(status: string) {
+    const allowed = ['Preparing', 'Applied', 'Under Review', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer', 'Accepted', 'Rejected', 'Withdrawn'];
+    if (!allowed.includes(status)) {
+      throw new BadRequestException(`Invalid application status: ${status}`);
+    }
   }
 }

@@ -41,6 +41,29 @@ export class AuthController {
     return this.authService.signup(dto, file);
   }
 
+  @Post('google')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Sign in or sign up with Google ID token credential' })
+  async googleAuth(@Body() body: { credential: string }) {
+    if (!body.credential) throw new BadRequestException('Google credential token is required.');
+    return this.authService.googleAuth(body.credential);
+  }
+
+  @Post('complete-profile')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT')
+  @ApiOperation({ summary: 'Complete candidate onboarding profile for Google or newly registered users' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('resume'))
+  async completeProfile(
+    @Req() req: any,
+    @Body() dto: Record<string, any>,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.authService.completeProfile(req.user.id, dto, file);
+  }
+
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify email with token from verification email' })

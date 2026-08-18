@@ -112,4 +112,42 @@ export class EmailService {
       throw err;
     }
   }
+
+  async sendGoogleAccountNoticeEmail(email: string, fullName: string): Promise<void> {
+    const loginUrl = `${this.appUrl}/login`;
+
+    try {
+      await this.resend.emails.send({
+        from: this.fromEmail,
+        to: email,
+        subject: 'ApplyOne Sign-In Method Reminder',
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+            <h1 style="color: #1a1a2e; font-size: 28px; font-weight: 800; margin-bottom: 8px;">ApplyOne</h1>
+            <p style="color: #64748b; font-size: 14px; margin-bottom: 32px;">AI-powered job application engine</p>
+            
+            <h2 style="color: #1a1a2e; font-size: 22px; font-weight: 700; margin-bottom: 16px;">
+              Google Account Sign-In
+            </h2>
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 24px;">
+              Hi ${fullName}, you requested a password reset, but your ApplyOne account was created with <strong>Google Sign-In</strong>.
+            </p>
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin-bottom: 24px;">
+              You do not have an email/password set. Please sign in securely using the <strong>Continue with Google</strong> button on the login page.
+            </p>
+            
+            <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; font-size: 16px; font-weight: 700; text-decoration: none; padding: 14px 32px; border-radius: 12px; margin-bottom: 24px;">
+              🚀 Sign In with Google
+            </a>
+            
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
+            <p style="color: #9ca3af; font-size: 12px;">ApplyOne — Your AI Job Application Engine</p>
+          </div>
+        `,
+      });
+      this.logger.log(`Google account notice email sent to ${email}`);
+    } catch (err: any) {
+      this.logger.warn(`Failed to send Google notice email to ${email}: ${err.message}`);
+    }
+  }
 }

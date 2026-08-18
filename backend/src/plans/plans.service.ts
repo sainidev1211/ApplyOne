@@ -11,7 +11,7 @@ const DEFAULT_PUBLIC_PLANS = [
     slug: 'professional',
     name: 'Professional',
     description: 'Essential matching and dispatch tools to jumpstart your applications.',
-    monthlyPrice: 9,
+    monthlyPrice: 999,
     yearlyPrice: 10990,
     currency: 'INR',
     jobCredits: 10,
