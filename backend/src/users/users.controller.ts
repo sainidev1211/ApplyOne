@@ -21,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { UsersService } from './users.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { ProtectedAdminUserDashboardGuard } from '../auth/guards/protected-admin-user-dashboard.guard.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
 import { UpdatePreferencesDto } from './dto/update-preferences.dto.js';
@@ -28,7 +29,7 @@ import { PaginationQueryDto } from './dto/pagination-query.dto.js';
 
 @ApiTags('Users')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ProtectedAdminUserDashboardGuard)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}

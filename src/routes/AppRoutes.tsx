@@ -5,6 +5,7 @@ import { AuthLayout } from '@/layouts/AuthLayout';
 import { DashboardLayout } from '@/layouts/DashboardLayout';
 import { ProtectedRoute, RoleGuard } from './guards';
 import { LoadingSpinner } from '@/components/ui/States';
+import { useAuthStore } from '@/store/authStore';
 
 // Lazy load pages for chunk optimizations
 const LandingPage = lazy(() => import('@/pages/LandingPage'));
@@ -26,6 +27,14 @@ const AdminCampaigns = lazy(() => import('@/pages/AdminCampaigns'));
 const AdminSubscriptions = lazy(() => import('@/pages/AdminSubscriptions'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('@/pages/TermsOfService'));
+
+function UserDashboardOnly({ children }: { children: React.ReactNode }) {
+  const profile = useAuthStore((state) => state.profile);
+  if (profile?.role?.toUpperCase() === 'ADMIN') {
+    return <Navigate to="/portal-access" replace />;
+  }
+  return <>{children}</>;
+}
 
 export function AppRoutes() {
   return (
@@ -63,7 +72,7 @@ export function AppRoutes() {
         <Route
           element={
             <ProtectedRoute>
-              <DashboardLayout />
+              <UserDashboardOnly><DashboardLayout /></UserDashboardOnly>
             </ProtectedRoute>
           }
         >

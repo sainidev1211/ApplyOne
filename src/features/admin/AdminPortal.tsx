@@ -41,6 +41,7 @@ import {
 type AdminTab = 'overview' | 'users' | 'edit-user' | 'push-dashboard' | 'applications' | 'notifications';
 
 const APPLICATION_STATUSES = ['Preparing', 'Applied', 'Under Review', 'Shortlisted', 'Interview Scheduled', 'Interviewing', 'Offer', 'Accepted', 'Rejected', 'Withdrawn'];
+const PROTECTED_ADMIN_EMAIL = 'admin@applyone.co';
 
 export default function AdminPortal() {
   const { profile, signOut } = useAuthStore();
@@ -113,6 +114,8 @@ export default function AdminPortal() {
   const [notifType, setNotifType] = useState('INFO');
   const [notifLink, setNotifLink] = useState('');
   const [sendingNotif, setSendingNotif] = useState(false);
+  const isProtectedAdmin = (candidate?: AdminUser | null) =>
+    candidate?.email?.trim().toLowerCase() === PROTECTED_ADMIN_EMAIL;
 
   // Fetch metrics
   const fetchMetrics = useCallback(async () => {
@@ -160,6 +163,10 @@ export default function AdminPortal() {
   }, [applicationSearch, applicationStatusFilter]);
 
   const handleSelectUser = (user: AdminUser, targetTab: 'edit-user' | 'push-dashboard' | 'applications' = 'edit-user') => {
+    if (isProtectedAdmin(user)) {
+      toast.warning('Protected executive admin', 'This account is excluded from candidate, subscription, and dashboard management.');
+      return;
+    }
     setSelectedUser(user);
     setEditFormData({
       fullName: user.fullName || '',
@@ -424,7 +431,7 @@ export default function AdminPortal() {
           </button>
           <button
             onClick={() => {
-              if (!selectedUser && users.length > 0) handleSelectUser(users[0], 'edit-user');
+              if (!selectedUser && users.some((u) => !isProtectedAdmin(u))) handleSelectUser(users.find((u) => !isProtectedAdmin(u))!, 'edit-user');
               else setActiveTab('edit-user');
             }}
             className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
@@ -437,7 +444,7 @@ export default function AdminPortal() {
           </button>
           <button
             onClick={() => {
-              if (!selectedUser && users.length > 0) handleSelectUser(users[0], 'push-dashboard');
+              if (!selectedUser && users.some((u) => !isProtectedAdmin(u))) handleSelectUser(users.find((u) => !isProtectedAdmin(u))!, 'push-dashboard');
               else setActiveTab('push-dashboard');
             }}
             className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
@@ -450,7 +457,7 @@ export default function AdminPortal() {
           </button>
           <button
             onClick={() => {
-              if (!selectedUser && users.length > 0) handleSelectUser(users[0], 'applications');
+              if (!selectedUser && users.some((u) => !isProtectedAdmin(u))) handleSelectUser(users.find((u) => !isProtectedAdmin(u))!, 'applications');
               else setActiveTab('applications');
             }}
             className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
@@ -805,7 +812,7 @@ export default function AdminPortal() {
                                 {u.accountType}
                               </Badge>
                               {u.role === 'ADMIN' && (
-                                <Badge variant="secondary" className="text-[9px]">Admin</Badge>
+                                <Badge variant="secondary" className="text-[9px]">{isProtectedAdmin(u) ? 'Protected Executive Admin' : 'Admin'}</Badge>
                               )}
                             </div>
                           </td>
@@ -867,19 +874,23 @@ export default function AdminPortal() {
                             </div>
                           </td>
                           <td className="p-3.5 text-right space-x-1.5">
-                            <Button
-                              onClick={() => handleSelectUser(u, 'edit-user')}
-                              variant="outline"
-                              className="h-7 text-[11px] px-2.5 border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200"
-                            >
-                              <Edit3 className="w-3 h-3 mr-1" /> Edit
-                            </Button>
-                            <Button
-                              onClick={() => handleSelectUser(u, 'push-dashboard')}
-                              className="h-7 text-[11px] px-2.5 bg-blue-600 hover:bg-blue-500 text-white"
-                            >
-                              <Sliders className="w-3 h-3 mr-1" /> Push
-                            </Button>
+                            {isProtectedAdmin(u) ? (
+                              <span className="text-[11px] font-semibold text-amber-300">Protected · Admin-only access</span>
+                            ) : <>
+                              <Button
+                                onClick={() => handleSelectUser(u, 'edit-user')}
+                                variant="outline"
+                                className="h-7 text-[11px] px-2.5 border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200"
+                              >
+                                <Edit3 className="w-3 h-3 mr-1" /> Edit
+                              </Button>
+                              <Button
+                                onClick={() => handleSelectUser(u, 'push-dashboard')}
+                                className="h-7 text-[11px] px-2.5 bg-blue-600 hover:bg-blue-500 text-white"
+                              >
+                                <Sliders className="w-3 h-3 mr-1" /> Push
+                              </Button>
+                            </>}
                           </td>
                         </tr>
                       ))
@@ -926,7 +937,7 @@ export default function AdminPortal() {
                   }}
                   className="bg-slate-950 border-slate-800 text-xs text-white flex-1"
                 >
-                  {users.map((u) => (
+                  {users.filter((u) => !isProtectedAdmin(u)).map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.fullName || u.email} ({u.email}) — {u.accountType}
                     </option>
@@ -1210,7 +1221,7 @@ export default function AdminPortal() {
                   }}
                   className="bg-slate-950 border-slate-800 text-xs text-white flex-1"
                 >
-                  {users.map((u) => (
+                  {users.filter((u) => !isProtectedAdmin(u)).map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.fullName || u.email} ({u.email})
                     </option>
@@ -1394,7 +1405,7 @@ export default function AdminPortal() {
               <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
                 <select value={selectedUser?.id || ''} onChange={(e) => { const candidate = users.find((u) => u.id === e.target.value); if (candidate) handleSelectUser(candidate, 'applications'); }} className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white">
                   <option value="">Select a candidate</option>
-                  {users.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.fullName || candidate.email} — {candidate.email}</option>)}
+                  {users.filter((candidate) => !isProtectedAdmin(candidate)).map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.fullName || candidate.email} — {candidate.email}</option>)}
                 </select>
                 {selectedUser && <div className="text-xs text-slate-400">{selectedUser.subscriptionInfo?.planName || selectedUser.dashboardData?.currentPlan || 'Free'} plan · {managedApplications.length} applications</div>}
               </div>
@@ -1485,7 +1496,7 @@ export default function AdminPortal() {
                         className="bg-slate-950 border-slate-800 text-xs text-white"
                       >
                         <option value="">select Candidate...</option>
-                        {users.map((u) => (
+                        {users.filter((u) => !isProtectedAdmin(u)).map((u) => (
                           <option key={u.id} value={u.id}>
                             {u.fullName || u.email} ({u.email})
                           </option>

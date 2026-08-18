@@ -67,4 +67,16 @@ describe('AdminUsersService dashboard metrics', () => {
     });
     expect(await validate(legacyNumericMetric, { whitelist: true, forbidNonWhitelisted: true })).toHaveLength(0);
   });
+
+  it('rejects all candidate-management mutations for the protected executive admin', async () => {
+    const protectedAdmin = { email: 'admin@applyone.co', save: jest.fn(), deleteOne: jest.fn() };
+    const userModel = { findById: jest.fn().mockReturnValue({ exec: jest.fn().mockResolvedValue(protectedAdmin) }) };
+    const service = new AdminUsersService(userModel as any, {} as any, {} as any, {} as any);
+
+    await expect(service.updateUser('admin@applyone.co', { role: 'USER', isActive: false })).rejects.toThrow('protected');
+    await expect(service.updateUserDashboard('admin@applyone.co', { currentPlan: 'Free' })).rejects.toThrow('protected');
+    await expect(service.deleteUser('admin@applyone.co')).rejects.toThrow('protected');
+    expect(protectedAdmin.save).not.toHaveBeenCalled();
+    expect(protectedAdmin.deleteOne).not.toHaveBeenCalled();
+  });
 });

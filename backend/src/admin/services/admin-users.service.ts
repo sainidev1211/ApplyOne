@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -14,6 +15,7 @@ import { Plan, PlanDocument } from '../../plans/schemas/plan.schema.js';
 import { PaginationQueryDto } from '../../users/dto/pagination-query.dto.js';
 import { randomUUID } from 'crypto';
 import { UpdateUserDashboardDto } from '../dto/update-dashboard-metrics.dto.js';
+import { isProtectedAdminAccount, PROTECTED_ADMIN_EMAIL } from '../../auth/constants/protected-admin.js';
 
 @Injectable()
 export class AdminUsersService {
@@ -25,6 +27,12 @@ export class AdminUsersService {
     @InjectModel(Subscription.name) private readonly subscriptionModel: Model<SubscriptionDocument>,
     @InjectModel(Plan.name) private readonly planModel: Model<PlanDocument>,
   ) {}
+
+  private assertNotProtectedAdmin(user: Pick<User, 'email'>): void {
+    if (isProtectedAdminAccount(user)) {
+      throw new ForbiddenException('The ApplyOne Executive Admin account is protected from candidate management actions.');
+    }
+  }
 
   private async getBillingSnapshot(userIds: string[]) {
     const uniqueIds = [...new Set(userIds.filter(Boolean).map((id) => String(id)))];
@@ -283,6 +291,7 @@ export class AdminUsersService {
     if (!user) {
       throw new NotFoundException(`User with ID "${id}" not found`);
     }
+    this.assertNotProtectedAdmin(user);
 
     if (data.fullName !== undefined) user.fullName = data.fullName.trim();
     if (data.phone !== undefined) user.phone = data.phone?.trim() || undefined;
@@ -318,6 +327,7 @@ export class AdminUsersService {
     if (!user) {
       throw new NotFoundException(`User with ID "${id}" not found`);
     }
+    this.assertNotProtectedAdmin(user);
 
     const previousPlan = user.dashboardData?.currentPlan;
     // Preserve the entire existing dashboard document and update only the fields
@@ -429,6 +439,7 @@ export class AdminUsersService {
     if (!user) {
       throw new NotFoundException(`User with ID "${userId}" not found`);
     }
+    this.assertNotProtectedAdmin(user);
 
     const newNotification = {
       id: randomUUID(),
@@ -464,7 +475,7 @@ export class AdminUsersService {
       createdAt: new Date(),
     };
 
-    const users = await this.userModel.find({ isActive: true }).exec();
+    const users = await this.userModel.find({ isActive: true, email: { $ne: PROTECTED_ADMIN_EMAIL } }).exec();
     for (const user of users) {
       user.notifications = user.notifications || [];
       user.notifications.unshift(newNotification);
@@ -479,10 +490,12 @@ export class AdminUsersService {
   }
 
   async deleteUser(id: string) {
-    const deleted = await this.userModel.findByIdAndDelete(id).exec();
-    if (!deleted) {
+    const user = await this.userModel.findById(id).exec();
+    if (!user) {
       throw new NotFoundException(`User with ID "${id}" not found`);
     }
+    this.assertNotProtectedAdmin(user);
+    await user.deleteOne();
 
     return {
       success: true,
@@ -566,6 +579,7 @@ export class AdminUsersService {
   }) {
     const user = await this.userModel.findById(userId).exec();
     if (!user) throw new NotFoundException(`User "${userId}" not found`);
+    this.assertNotProtectedAdmin(user);
 
     if (!data.jobTitle?.trim()) throw new BadRequestException('Job title is required');
     if (!data.company?.trim()) throw new BadRequestException('Company is required');
@@ -630,6 +644,7 @@ export class AdminUsersService {
   }>) {
     const user = await this.userModel.findById(userId).exec();
     if (!user) throw new NotFoundException(`User "${userId}" not found`);
+    this.assertNotProtectedAdmin(user);
 
     const dd: any = user.dashboardData || {};
     const applications: any[] = dd.applications || [];
@@ -672,6 +687,7 @@ export class AdminUsersService {
   async deleteApplication(userId: string, appId: string) {
     const user = await this.userModel.findById(userId).exec();
     if (!user) throw new NotFoundException(`User "${userId}" not found`);
+    this.assertNotProtectedAdmin(user);
 
     const dd: any = user.dashboardData || {};
     const applications: any[] = dd.applications || [];
@@ -705,6 +721,7 @@ export class AdminUsersService {
   async bulkCreateApplications(userId: string, apps: any[]) {
     const user = await this.userModel.findById(userId).exec();
     if (!user) throw new NotFoundException(`User "${userId}" not found`);
+    this.assertNotProtectedAdmin(user);
 
     const dd: any = user.dashboardData || {};
     const existing: any[] = dd.applications || [];
