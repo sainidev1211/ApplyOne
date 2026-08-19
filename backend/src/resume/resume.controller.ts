@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   UseGuards,
   Request,
   UseInterceptors,
@@ -33,7 +34,7 @@ export class ResumeController {
   constructor(private readonly resumeService: ResumeService) {}
 
   @Post('upload')
-  @ApiOperation({ summary: 'Upload a new resume version' })
+  @ApiOperation({ summary: 'Upload a new resume (PDF or Word). File stored in MongoDB as binary.' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('resume'))
   async uploadResume(
@@ -47,7 +48,7 @@ export class ResumeController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all resumes for user' })
+  @ApiOperation({ summary: 'Get all resumes (metadata only, no binary data) for the authenticated user' })
   async getAllResumes(@Request() req: any) {
     return this.resumeService.getAllResumes(req.user.id);
   }
@@ -58,23 +59,34 @@ export class ResumeController {
     return this.resumeService.getResumeHistory(req.user.id);
   }
 
+  /**
+   * Download endpoint — triggers browser "Save As" dialog.
+   * ?inline=true → shows PDF in browser tab instead of downloading.
+   */
   @Get(':id/download')
-  @ApiOperation({ summary: 'Download the authenticated user resume' })
-  async downloadResume(@Request() req: any, @Param('id') id: string, @Res() res: Response) {
-    const { resume, buffer, filePath } = await this.resumeService.getDownload(req.user.id, id);
+  @ApiOperation({ summary: 'Download or view a resume file stored in MongoDB' })
+  async downloadResume(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Query('inline') inline: string,
+    @Res() res: Response,
+  ) {
+    const { resume, buffer } = await this.resumeService.getDownload(req.user.id, id);
+
+    const contentDisposition =
+      inline === 'true' || inline === '1'
+        ? `inline; filename="${encodeURIComponent(resume.fileName || 'resume.pdf')}"`
+        : `attachment; filename="${encodeURIComponent(resume.fileName || 'resume.pdf')}"`;
+
     res.setHeader('Content-Type', resume.mimeType || 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(resume.fileName || 'resume.pdf')}"`);
-    if (buffer) {
-      return res.send(buffer);
-    }
-    if (filePath) {
-      return res.sendFile(filePath, { root: process.cwd() });
-    }
-    return res.status(404).send('Resume file is unavailable');
+    res.setHeader('Content-Disposition', contentDisposition);
+    res.setHeader('Content-Length', buffer.length);
+    res.setHeader('Cache-Control', 'no-store');
+    return res.send(buffer);
   }
 
   @Patch(':id/default')
-  @ApiOperation({ summary: 'Set resume as default' })
+  @ApiOperation({ summary: 'Set a resume as the default' })
   async setDefaultResume(
     @Request() req: any,
     @Param('id') id: string,

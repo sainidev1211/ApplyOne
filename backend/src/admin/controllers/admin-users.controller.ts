@@ -8,6 +8,8 @@ import {
   Param,
   Query,
   UseGuards,
+  HttpCode,
+  HttpStatus,
   Res,
   Patch,
 } from '@nestjs/common';
@@ -37,22 +39,23 @@ export class AdminUsersController {
   }
 
   @Get(':id/resume/download')
-  @ApiOperation({ summary: 'Download candidate resume directly from database' })
+  @ApiOperation({ summary: 'Download or view candidate resume stored in MongoDB' })
   async downloadResume(
     @Param('id') id: string,
     @Query('resumeId') resumeId: string,
+    @Query('inline') inline: string,
     @Res() res: Response,
   ) {
-    const { resume, buffer, filePath } = await this.adminUsersService.getResumeDownload(id, resumeId);
+    const { resume, buffer } = await this.adminUsersService.getResumeDownload(id, resumeId);
+    const contentDisposition =
+      inline === 'true' || inline === '1'
+        ? `inline; filename="${encodeURIComponent(resume.fileName || 'resume.pdf')}"`
+        : `attachment; filename="${encodeURIComponent(resume.fileName || 'resume.pdf')}"`;
     res.setHeader('Content-Type', resume.mimeType || 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(resume.fileName || 'resume.pdf')}"`);
-    if (buffer) {
-      return res.send(buffer);
-    }
-    if (filePath) {
-      return res.sendFile(filePath, { root: process.cwd() });
-    }
-    return res.status(404).send('Resume file is unavailable');
+    res.setHeader('Content-Disposition', contentDisposition);
+    res.setHeader('Content-Length', buffer.length);
+    res.setHeader('Cache-Control', 'no-store');
+    return res.send(buffer);
   }
 
   // ── Application endpoints must come before :id so they don't get swallowed ──

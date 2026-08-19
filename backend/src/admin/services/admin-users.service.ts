@@ -257,8 +257,9 @@ export class AdminUsersService {
   }
 
   async getResumeDownload(userId: string, resumeId?: string) {
-    const user = await this.userModel.findById(userId).lean().exec();
+    const user = await this.userModel.findById(userId).exec();
     if (!user) throw new NotFoundException(`User "${userId}" not found`);
+
     const resumes: any[] = user.resumes || [];
     let resume = resumeId ? resumes.find((r) => r.id === resumeId) : null;
     if (!resume) {
@@ -266,25 +267,41 @@ export class AdminUsersService {
     }
     if (!resume) throw new NotFoundException('Candidate has no uploaded resume');
 
-    if (resume.fileData) {
-      const buffer = Buffer.isBuffer(resume.fileData)
-        ? resume.fileData
-        : Buffer.from(resume.fileData.buffer || resume.fileData);
+    const buffer = this._extractResumeBuffer(resume);
+    if (buffer) {
       return { resume, buffer, filePath: null };
     }
 
-    if (resume.storagePath && resume.storagePath !== 'database') {
-      const uploadDir = './uploads';
-      const path = await import('path');
-      const fs = await import('fs');
-      const filePath = path.join(uploadDir, path.basename(resume.storagePath));
-      if (fs.existsSync(filePath)) {
-        return { resume, buffer: null, filePath };
-      }
-    }
-
-    throw new NotFoundException('Candidate resume file is unavailable');
+    throw new NotFoundException(
+      'Resume file data is not available in the database. The user needs to re-upload their resume.',
+    );
   }
+
+  /**
+   * Robustly extract a Node.js Buffer from a MongoDB-stored resume's fileData,
+   * handling all possible BSON/Mongoose serialization shapes.
+   */
+  private _extractResumeBuffer(resume: any): Buffer | null {
+    const raw = resume?.fileData;
+    if (!raw) return null;
+    if (Buffer.isBuffer(raw)) return raw;
+    // BSON Binary — Mongoose wraps Buffer fields in a Binary object
+    if (raw.buffer instanceof Uint8Array || raw.buffer instanceof ArrayBuffer) {
+      return Buffer.from(raw.buffer);
+    }
+    // Lean / JSON form: { type: 'Buffer', data: [...] }
+    if (raw.data && Array.isArray(raw.data)) {
+      return Buffer.from(raw.data);
+    }
+    if (raw instanceof Uint8Array || raw instanceof ArrayBuffer) {
+      return Buffer.from(raw);
+    }
+    if (typeof raw === 'string') {
+      return Buffer.from(raw, 'binary');
+    }
+    return null;
+  }
+
 
   async updateUser(id: string, data: Record<string, any>) {
     const user = await this.userModel.findById(id).exec();

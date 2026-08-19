@@ -1,36 +1,24 @@
 import { Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import { mkdirSync } from 'fs';
+import { memoryStorage } from 'multer';
 
+/**
+ * UploadsModule — uses memoryStorage so uploaded files are available as
+ * file.buffer in the request handler. The ResumeService persists the binary
+ * data directly inside the MongoDB document (StoredResume.fileData: Buffer).
+ * No local disk paths are involved, making the service portable across
+ * deployments without a shared filesystem.
+ */
 @Module({
   imports: [
     MulterModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const uploadPath = configService.get<string>(
-          'app.uploadPath',
-          './uploads',
-        );
         const maxSizeMb = configService.get<number>('app.maxUploadSizeMb', 10);
-
-        // Ensure upload directory exists
-        mkdirSync(uploadPath, { recursive: true });
-
         return {
-          storage: diskStorage({
-            destination: (_req, _file, callback) => {
-              callback(null, uploadPath);
-            },
-            filename: (_req, file, callback) => {
-              const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-              const ext = extname(file.originalname);
-              callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
-            },
-          }),
+          storage: memoryStorage(),
           limits: {
             fileSize: maxSizeMb * 1024 * 1024,
           },
