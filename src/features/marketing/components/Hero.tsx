@@ -45,16 +45,16 @@ export function Hero() {
         {/* Hero Title */}
         <div className="space-y-4">
           <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight"
-          >
-            Apply Once.{' '}
-            <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-              Reach Everywhere.
-            </span>
-          </motion.h1>
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.6, delay: 0.1 }}
+  className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight"
+>
+  Automate Your Job Applications.{' '}
+  <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+    Reach More Opportunities.
+  </span>
+</motion.h1>
 
           {/* Hero Copy */}
           <motion.p
