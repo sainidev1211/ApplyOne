@@ -10,14 +10,23 @@ import { AboutUs } from '@/features/marketing/components/AboutUs';
 import { Reviews } from '@/features/marketing/components/Reviews';
 import { FAQ } from '@/features/marketing/components/FAQ';
 import { SEO } from '@/components/shared/SEO';
+import { StructuredData } from '@/components/shared/StructuredData';
 
 export default function LandingPage() {
   return (
     <>
+      {/* SEO metadata */}
       <SEO
-        title="Apply Once. Reach Everywhere"
-        description="Simplify your job search. Build your candidate profile, set automation triggers, and dispatch your applications to internships and entry roles automatically."
+        title="Job Application Automation Platform"
+        description="ApplyOne is a job application automation platform for students, freshers, and professionals. Discover job opportunities, manage your resume, and automate applications to internships, part-time jobs, and full-time roles."
+        canonical="https://www.applyone.co.in/"
+        
       />
+
+      {/* Structured data for search engines */}
+      <StructuredData />
+
+      {/* Existing landing page design */}
       <div className="flex flex-col">
         <Hero />
         <CompanyLogos />
