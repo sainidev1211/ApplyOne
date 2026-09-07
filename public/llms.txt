@@ -1,0 +1,40 @@
+# ApplyOne
+
+> ApplyOne (applyone.co.in) is an AI-powered job application automation platform built for students, freshers, and working professionals in India.
+
+## Overview
+ApplyOne simplifies the job search process by automating candidate applications across corporate career portals, job boards, and startup networks. Candidates create their career profile once, upload their resume, and specify target job roles, preferred locations, and compensation preferences. ApplyOne's dispatch engine and AI algorithms then tailor the resume for Applicant Tracking Systems (ATS) and submit applications on the candidate's behalf.
+
+## Target Audience
+- **College Students & Final-Year Candidates**: Seeking paid summer internships and graduate apprenticeships in Indian tech hubs.
+- **Freshers & Entry-Level Job Seekers**: Recent graduates looking for their first software engineering, QA, or tech role (0–1 years experience).
+- **Working Professionals**: Engineers and analysts seeking mid-level or senior transitions without spending 20+ hours weekly on manual job applications.
+
+## Core Features
+- **Automated Application Dispatch**: Once configured, ApplyOne matches candidates with verified job openings daily and submits tailored applications automatically.
+- **AI-Powered ATS Resume Checker**: Evaluates resumes against modern Applicant Tracking System standards (Workday, Taleo, Greenhouse, Lever), checks keyword match density, and highlights formatting risks.
+- **Candidate Tracking Dashboard**: Real-time visibility into every dispatched application, including employer name, position title, salary band, application timestamp, and hiring status.
+- **Verified Job & Internship Directory**: Curated, verified tech job listings in Indian tech centers including Indore, Pune, Bengaluru, and Remote hubs.
+- **Enterprise-Grade Data Security**: Candidate resumes, contact credentials, and personal details are encrypted and shared exclusively with hiring employers during application submission.
+
+## Pricing & Subscription Plans
+- **Professional**: Essential matching and dispatch (up to 10 daily matches, 10 credits/month, 50–60 applications/month).
+- **Premium**: For active job seekers (up to 15 daily matches, 20 credits/month, 80–100 applications/month, ATS Checker included).
+- **Elite**: Rapid placement campaigns (up to 25 daily matches, 30 credits/month, 150 applications/month, ATS Checker included).
+
+## Primary Web Locations
+- Homepage: https://www.applyone.co.in/
+- Career Guides & Articles: https://www.applyone.co.in/blog
+- Verified Jobs Directory: https://www.applyone.co.in/jobs
+- Indore Freshers Hub: https://www.applyone.co.in/jobs/indore/freshers
+- Pune Software Engineer Hub: https://www.applyone.co.in/jobs/pune/software-engineer
+- Pune Internships Hub: https://www.applyone.co.in/internships/pune
+- Bengaluru Frontend Jobs: https://www.applyone.co.in/jobs/bengaluru/frontend-developer
+- Candidate Registration: https://www.applyone.co.in/signup
+- Privacy Policy: https://www.applyone.co.in/privacy
+- Terms of Service: https://www.applyone.co.in/terms
+
+## Contact Information
+- Website: https://www.applyone.co.in
+- Support Email: supportapplyone@gmail.com
+- Social: @ApplyOneHQ

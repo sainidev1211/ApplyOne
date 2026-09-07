@@ -40,6 +40,8 @@ export const ROUTES = {
   ADMIN: '/admin',
   PRIVACY: '/privacy',
   TERMS: '/terms',
+  BLOG: '/blog',
+  JOBS: '/jobs',
 };
 
 export type AccountType = 'Student' | 'Fresher' | 'Professional';
@@ -58,6 +60,8 @@ export const NAVIGATION_LINKS = {
     product: [
       { label: 'Features', href: '#features' },
       { label: 'Pricing', href: '#pricing' },
+      { label: 'Career Guides', href: '/blog' },
+      { label: 'Jobs Directory', href: '/jobs' },
       { label: 'Resources', href: '#resources' },
     ],
     company: [

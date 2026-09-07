@@ -1,4 +1,21 @@
 User-agent: *
 Allow: /
+Allow: /blog/
+Allow: /jobs/
+Allow: /internships/
+Allow: /privacy
+Allow: /terms
+
+# Disallow authenticated candidate dashboard and admin panels
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /portal-access
+Disallow: /portal-access/
+Disallow: /admin
+Disallow: /admin/
+Disallow: /admin-login
+Disallow: /auth/callback
+Disallow: /api/
 
 Sitemap: https://www.applyone.co.in/sitemap.xml
+Sitemap: https://www.applyone.co.in/sitemap_index.xml

@@ -27,6 +27,10 @@ const AdminCampaigns = lazy(() => import('@/pages/AdminCampaigns'));
 const AdminSubscriptions = lazy(() => import('@/pages/AdminSubscriptions'));
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('@/pages/TermsOfService'));
+const BlogIndex = lazy(() => import('@/pages/blog/BlogIndex'));
+const BlogPost = lazy(() => import('@/pages/blog/BlogPost'));
+const JobsDirectory = lazy(() => import('@/pages/jobs/JobsDirectory'));
+const ProgrammaticJobPage = lazy(() => import('@/pages/jobs/ProgrammaticJobPage'));
 
 function UserDashboardOnly({ children }: { children: React.ReactNode }) {
   const profile = useAuthStore((state) => state.profile);
@@ -51,6 +55,12 @@ export function AppRoutes() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
+          {/* SEO & Knowledge Surface Area Routes */}
+          <Route path="/blog" element={<BlogIndex />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
+          <Route path="/jobs" element={<JobsDirectory />} />
+          <Route path="/jobs/:city/:role" element={<ProgrammaticJobPage />} />
+          <Route path="/internships/:city" element={<ProgrammaticJobPage isInternship />} />
         </Route>
 
         {/* Authentication Card Layout Wrapper */}
